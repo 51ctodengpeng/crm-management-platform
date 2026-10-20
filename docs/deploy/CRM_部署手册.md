@@ -1,8 +1,8 @@
 # CRM 部署手册（Nginx + Gunicorn + MySQL 8）
 
-> 目标服务器：腾讯云轻量应用服务器 `lhins-fd3befzd`（名称「测试服务器」）· 42.194.238.77 · OpenCloudOS 9.6 · 2C2G
-> 访问入口：https://crm.powershell.com.cn （443 → Nginx → 127.0.0.1:5050）
-> 证书：`/ssl/powershell.com.cn.pem` + `/ssl/powershell.com.cn.key`（SAN 含 `*.powershell.com.cn`，crm 子域已覆盖）
+> 目标服务器：一台 Linux 云主机（OpenCloudOS 9.6 · 2C2G），下文以 `/opt/crm` 为安装目录
+> 访问入口：`https://你的域名` （443 → Nginx → 127.0.0.1:5050）
+> 证书：`/ssl/<域名>.pem` + `/ssl/<域名>.key`（泛域名证书已在子域上验证可用）
 
 ---
 
