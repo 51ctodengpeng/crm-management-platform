@@ -18,6 +18,13 @@ import webbrowser
 # 打包后工作目录可能是任意路径，这里确保能 import 到项目模块
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# 安装版（Inno Setup 装到 Program Files 并注册服务）会在安装目录写 installed.ini，
+# 用它指定数据目录与监听端口。这一步必须发生在 import config 之前：config 一被导入
+# 就会锁定 DATA_DIR，之后再改环境变量已经晚了。
+from installinfo import prepare_env_from_install  # noqa: E402
+
+INSTALLED_INFO = prepare_env_from_install()
+
 from config import Config, DATA_DIR, is_frozen  # noqa: E402
 
 DEFAULT_PORT = 8081
@@ -143,6 +150,13 @@ def parse_args(argv):
                    help="跳过启动设置窗口，直接用 --port 或默认端口启动")
     p.add_argument("--reset-admin", metavar="PASSWORD",
                    help="把管理员账号 admin 的密码重置为指定值后退出")
+    # ---- Windows 服务相关（安装包调用，普通用户一般不需要手动执行）----
+    p.add_argument("--install-service", action="store_true",
+                   help="注册为 Windows 服务并设为开机自启（需管理员权限）")
+    p.add_argument("--remove-service", action="store_true",
+                   help="停止并删除 Windows 服务（需管理员权限）")
+    p.add_argument("--run-service", action="store_true",
+                   help="以服务身份运行（由服务控制管理器调用，请勿手工执行）")
     return p.parse_args(argv)
 
 
@@ -177,6 +191,23 @@ def maybe_ask_port(args):
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
 
+    # ---- Windows 服务模式：不走启动窗口、不打印横幅 ----
+    if args.run_service:
+        import win_service
+        win_service.run_service()
+        return 0
+    if args.install_service:
+        import win_service
+        win_service.install_service()
+        print(f"{C['green']}已注册 Windows 服务：{win_service.DISPLAY_NAME} "
+              f"（{win_service.SERVICE_NAME}，开机自启）{C['reset']}")
+        return 0
+    if args.remove_service:
+        import win_service
+        win_service.remove_service()
+        print(f"{C['green']}已删除 Windows 服务：{win_service.SERVICE_NAME}{C['reset']}")
+        return 0
+
     picked = maybe_ask_port(args)
     if picked is None:
         print(f"{C['dim']}已取消启动，再见。{C['reset']}")
@@ -209,6 +240,14 @@ def main(argv=None):
             user.set_password(args.reset_admin)
             user.role, user.status = "admin", "active"
             db.session.commit()
+        # 安装向导里显式设过密码，之前自动生成的那份临时口令文件就该作废
+        try:
+            from bootstrap import INITIAL_PWD_FILE
+            stale = DATA_DIR / INITIAL_PWD_FILE
+            if stale.exists():
+                stale.unlink()
+        except Exception:
+            pass
         print(f"{C['green']}已将管理员 admin 的密码重置为：{args.reset_admin}{C['reset']}")
         return 0
 
@@ -253,7 +292,11 @@ if __name__ == "__main__":
         print()
         print(f"{C['red']}启动失败：{exc}{C['reset']}")
         traceback.print_exc()
-        if is_frozen():
+        # 只有“用户双击”这种交互场景才等回车。安装程序 / 服务控制管理器调用时
+        # 没有控制台可交互，等回车会让安装流程永久卡死。
+        _non_interactive = any(a in sys.argv[1:] for a in (
+            "--install-service", "--remove-service", "--run-service", "--reset-admin"))
+        if is_frozen() and not _non_interactive:
             try:
                 input("\n按回车键关闭窗口...")
             except EOFError:

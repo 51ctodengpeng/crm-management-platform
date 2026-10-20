@@ -10,6 +10,11 @@ __pycache__/
 .venv/
 venv/
 
+# ---- 安装包产物（走 GitHub Releases 分发，不入库）----
+deploy/output/
+deploy/output-test/
+deploy/_test.iss
+
 # ---- 环境与密钥（严禁提交）----
 .env
 .env.*

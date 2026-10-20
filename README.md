@@ -5,7 +5,27 @@
 
 > 仓库名 `crm-management-platform` 与配套的 `ad-management-platform` 保持同一命名风格，便于在仓库列表里一眼归组。
 
-## 快速开始（打包成 EXE，推荐给非技术用户）
+## 下载安装包（推荐，普通用户看这里）
+
+**下载地址：<https://github.com/51ctodengpeng/crm-management-platform/releases>**
+
+| 下载文件 | 说明 |
+| --- | --- |
+| `CRM-Management-Setup-v2.0.0.exe` | Windows 安装包（约 18 MB），含运行时，目标机无需装 Python |
+
+安装包做了什么：
+
+- 装进 `C:\Program Files\CRM 客户管理系统`（普通用户改不动）
+- 数据单独放 `C:\ProgramData\CRM客户管理系统`（Program Files 不可写，放一起服务会起不来）
+- **注册成 Windows 服务 `CRMManager`**：开机自启、后台运行、无黑框窗口，可在 services.msc 管理
+- 向导里可设端口、是否允许局域网访问（自动放通防火墙）、管理员初始口令
+- 桌面与开始菜单快捷方式、完整的卸载入口
+
+详细步骤、静默部署参数、排障表见 [`docs/使用说明.md`](docs/使用说明.md)。
+
+> 也可以不安装，直接用便携版 EXE（见下一节），数据跟着文件夹走。
+
+## 快速开始（自己打包 EXE，便携版）
 
 ```bat
 build_exe.bat
@@ -62,6 +82,29 @@ erp/
   程序更新替换 EXE 不影响已有数据
 - 打包引擎：PyInstaller + waitress（生产级 WSGI，非 Flask 调试服务器）
 
+### 打安装包（Inno Setup，带服务注册）
+
+前置：装 [Inno Setup 6](https://jrsoftware.org/isdl.php)，并把简体中文语言文件
+`ChineseSimplified.isl` 放到 `Inno Setup 6\Languages\`（否则向导是英文）。
+
+```bat
+:: 1) 先打目录版，安装包引用的是整个文件夹
+.venv\Scripts\python build_exe.py --onedir --name "CRM客户管理系统"
+
+:: 2) 编译安装包
+"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" deploy\installer.iss
+:: 产物：deploy\output\CRM客户管理系统_安装程序_v2.0.0.exe
+```
+
+安装脚本做了这些事，改行为都在 `deploy/installer.iss`：
+
+- 装到 Program Files，数据目录固定到 `%ProgramData%\CRM客户管理系统` 并写 `installed.ini`
+- 向导两页：端口 + 是否允许局域网（自动放通防火墙）、管理员初始口令（校验强度与一致性）
+- 默认注册 **Windows 服务**（`win_service.py`，pywin32），开机自启、无黑框
+- 卸载时停服务、删服务、删防火墙规则；数据目录保留
+- 静默部署参数：`/PORT= /LAN= /ADMINPWD= /LOG=`
+- 本地验证用 `deploy\make_test_build.py`（生成免提权、临时数据目录的测试包）
+
 ## 视觉主题
 
 淡蓝科技风（v3 浅色控制台），配色为项目自建；支持**夜间模式**（顶栏/登录页一键切换，偏好本地记忆，下次访问自动恢复）：
@@ -84,6 +127,8 @@ erp/
 erp/
 ├── app.py                 程序入口（应用工厂 + 仪表盘 + 全局搜索 + 日志页 + 模板过滤器）
 ├── desktop.py             桌面版入口（EXE 用：横幅 + 自动开浏览器 + waitress）
+├── win_service.py         Windows 服务包装（pywin32）：注册 / 删除 / 以服务身份运行
+├── installinfo.py         读取安装目录的 installed.ini，决定数据目录与监听参数
 ├── bootstrap.py           首次运行自举：建表 / 老库补列 / 建默认管理员（幂等）
 ├── config.py              配置：资源目录与数据目录、数据库/上传目录/密钥/大小限制/业务字典
 ├── extensions.py          db / login_manager / csrf 扩展实例
@@ -109,6 +154,9 @@ erp/
 │   ├── test_e2e.py        97 项端到端功能自测
 │   └── run_isolated.sh    在临时数据库上跑自测，不污染正式数据
 └── deploy/
+    ├── installer.iss      Inno Setup 安装包脚本（服务版，含向导页与静默参数）
+    ├── 使用说明.txt        随安装包分发的简版说明
+    ├── make_test_build.py 生成免提权的测试安装包（本地验证用）
     ├── nginx-crm.conf     Nginx 反向代理配置
     ├── crm.service        systemd 服务单元
     └── backup.sh          定时备份脚本

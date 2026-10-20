@@ -5,13 +5,17 @@
 - RESOURCE_DIR「资源目录」：模板 / 静态文件，随程序分发，只读。
   打包后位于 PyInstaller 解压出的临时目录（sys._MEIPASS），进程退出即被清理。
 - DATA_DIR「数据目录」：crm.db / uploads / .secret_key，必须可写且持久。
-  打包后固定放在 EXE 同级目录（绿色便携），该目录不可写时回落到 %LOCALAPPDATA%\\CRMSystem。
+  三种情形各有归属：安装版（Inno Setup 装到 Program Files 并注册服务）用
+  %ProgramData%\\CRM客户管理系统（由安装目录的 installed.ini 指定）；
+  便携版（双击 EXE）用 EXE 同级目录；源码方式用项目目录。
 """
 import os
 import secrets
 import sys
 from datetime import timedelta
 from pathlib import Path
+
+from installinfo import read_installed
 
 
 def is_frozen() -> bool:
@@ -50,14 +54,22 @@ def _data_dir() -> Path:
         p = Path(env)
         p.mkdir(parents=True, exist_ok=True)
         return p
-    # 2) 源码方式运行：就用项目目录，保持原有习惯不变
+    # 2) 安装版：安装目录有 installed.ini，数据固定到 ProgramData
+    #    （Program Files 对普通用户只读，服务以 LocalSystem 跑又会让数据归属混乱，
+    #     所以装到 Program Files 的场景必须把数据挪出来）
+    info = read_installed()
+    if info.get("datadir"):
+        p = Path(info["datadir"])
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+    # 3) 源码方式运行：就用项目目录，保持原有习惯不变
     if not is_frozen():
         return Path(__file__).resolve().parent
-    # 3) EXE 运行：优先 EXE 同级目录（整个文件夹拷走即可迁移）
+    # 4) 便携版：优先 EXE 同级目录（整个文件夹拷走即可迁移）
     exe_dir = Path(sys.executable).resolve().parent
     if _writable(exe_dir):
         return exe_dir
-    # 4) 兜底：EXE 放在只读目录（如 Program Files）时改用用户数据目录
+    # 5) 兜底：EXE 放在只读目录又没写 installed.ini 时，改用用户数据目录
     fallback = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "CRMSystem"
     fallback.mkdir(parents=True, exist_ok=True)
     return fallback

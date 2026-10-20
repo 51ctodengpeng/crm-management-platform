@@ -1,0 +1,62 @@
+﻿CRM 客户管理系统 —— 安装后必读
+======================================================================
+
+一、怎么打开
+  1. 桌面「CRM 客户管理系统」双击即可（默认浏览器打开 http://127.0.0.1:8081/）
+  2. 或从开始菜单：开始 → CRM 客户管理系统 → 打开管理界面
+  3. 首次登录：账号 admin，密码就是安装向导里设置的那个
+
+二、它现在是以什么方式在跑
+  安装程序已把它注册成 Windows 服务（服务名 CRMManager），所以：
+  · 开机自动启动，不用登录桌面也能用
+  · 没有黑框窗口，关掉浏览器不影响服务
+  · 启动 / 停止 / 查看状态：Win+R 输入 services.msc，找到「CRM 客户管理系统」
+  · 命令行等价操作： net start CRMManager   /   net stop CRMManager
+
+三、数据放在哪（重要）
+  程序装在 Program Files，数据在：C:\ProgramData\CRM客户管理系统\
+      crm.db          数据库（客户 / 项目 / 合同 / 回款全在这）
+      uploads\        合同、发票等附件
+      avatars\        头像
+      .secret_key     加密密钥，丢了已加密的域凭据就解不开
+      logs\           运行日志与服务日志
+  备份 = 把整个 CRM客户管理系统 文件夹拷走。恢复 = 停服务后拷回。
+
+四、想改端口 / 只让本机访问
+  编辑安装目录下的 installed.ini（默认 C:\Program Files\CRM 客户管理系统\installed.ini）：
+
+      [CRM]
+      DataDir=C:\ProgramData\CRM客户管理系统
+      Host=0.0.0.0          ; 0.0.0.0 = 局域网可访问；127.0.0.1 = 仅本机
+      Port=8081
+
+  改完重启服务：services.msc 里右键「重新启动」，或
+      net stop CRMManager && net start CRMManager
+
+五、让同事访问
+  安装时勾选「允许局域网内的其他电脑访问」会自动放通防火墙端口。
+  没勾选的话，按上面第四条把 Host 改成 0.0.0.0，再手工放通端口：
+      netsh advfirewall firewall add rule name="CRM 8081" dir=in action=allow protocol=TCP localport=8081
+  同事访问：http://本机IP:8081/
+
+  安全提醒：本系统是 HTTP 明文，只建议内网用。要从公网访问，
+  请在前面加一层带 HTTPS 的反向代理（Nginx / IIS），不要直接映射端口。
+
+六、升级
+  直接运行新版本安装程序即可，会检测旧版本并保留原有数据。
+  升级前建议先把 C:\ProgramData\CRM客户管理系统 整个拷一份。
+
+七、卸载
+  开始菜单 → CRM 客户管理系统 → 卸载；或 控制面板 → 程序和功能。
+  卸载会自动停止并删除服务、删除防火墙规则。
+  注意：数据目录 C:\ProgramData\CRM客户管理系统 默认保留，确认不要了再手工删除。
+
+八、出问题看这里
+  · 服务起不来：看 C:\ProgramData\CRM客户管理系统\logs\service.log
+  · 端口被占用：换一个端口（见第四条）
+  · 忘记管理员密码：在安装目录执行
+        "CRM客户管理系统.exe" --reset-admin 新密码
+    （需要管理员权限，会直接改数据库里的密码）
+  · 浏览器打不开但服务在跑：检查是否被安全软件拦截，或本机 hosts 异常
+
+服务名：CRMManager        默认端口：8081        项目主页：https://www.powershell.com.cn

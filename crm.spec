@@ -33,6 +33,15 @@ hiddenimports = [
     "openpyxl.workbook",
     "tkinter",
     "tkinter.ttk",
+    # Windows 服务（pywin32）：都是 pyd/动态加载，静态分析容易漏
+    "installinfo",
+    "win_service",
+    "win32timezone",
+    "win32serviceutil",
+    "win32service",
+    "win32event",
+    "servicemanager",
+    "pywintypes",
 ]
 
 # ---------- 排除无用大模块：减小体积、降低杀软误报概率 ----------

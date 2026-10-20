@@ -381,7 +381,40 @@ def ensure_default_admin() -> tuple[bool, str, str]:
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
+    _write_initial_password(username, password)
     return True, username, password
+
+
+INITIAL_PWD_FILE = "初始管理员密码.txt"
+
+
+def _write_initial_password(username: str, password: str) -> None:
+    """安装版（服务模式）没有控制台可看，把首次口令落到数据目录供管理员取用。
+
+    只在安装版（存在 installed.ini）时落盘；便携版 / 源码版照旧只看控制台。
+    服务以 LocalSystem 启动时 console 输出无人可见，不落盘就等于把系统锁在门外。
+    """
+    try:
+        from installinfo import read_installed
+
+        if not read_installed():
+            return
+        import time
+
+        from config import DATA_DIR
+
+        p = DATA_DIR / INITIAL_PWD_FILE
+        p.write_text(
+            "CRM 客户管理系统 - 首次登录信息\n"
+            "================================\n"
+            f"账号：{username}\n"
+            f"密码：{password}\n\n"
+            "登录后请立即在「修改密码」中更换，然后删除本文件。\n"
+            f"生成时间：{time.strftime('%Y-%m-%d %H:%M:%S')}\n",
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
 
 
 def bootstrap(app, verbose: bool = False) -> dict:
