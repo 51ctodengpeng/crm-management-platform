@@ -3,14 +3,17 @@
 
     python tests/smoke_ui.py [base_url]
 """
+import os
 import re
 import sys
 
 import requests
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8081"
-ADMIN_USER = "admin"
-ADMIN_PASS = "admin123"
+ADMIN_USER = os.environ.get("CRM_TEST_ADMIN", "admin")
+ADMIN_PASS = os.environ.get("CRM_TEST_PASS", "")
+if not ADMIN_PASS:
+    raise SystemExit("请先设置 CRM_TEST_PASS 环境变量（被测实例的管理员口令）")
 
 
 def csrf(html: str) -> str:

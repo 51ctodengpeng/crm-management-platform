@@ -357,7 +357,11 @@ def ensure_contacts() -> int:
 
 
 def ensure_default_admin() -> tuple[bool, str, str]:
-    """账号表为空时创建默认管理员。返回 (是否新建, 用户名, 密码)"""
+    """账号表为空时创建默认管理员。返回 (是否新建, 用户名, 密码)
+
+    未通过环境变量指定初始口令时，随机生成 12 位密码，避免出现全网通用的
+    固定初始口令；该密码仅在首次创建时返回一次，由调用方打印给管理员。
+    """
     from config import Config
     from models import User
 
@@ -365,7 +369,13 @@ def ensure_default_admin() -> tuple[bool, str, str]:
     password = Config.DEFAULT_ADMIN_PASSWORD
 
     if db.session.scalar(db.select(db.func.count(User.id))) or 0:
-        return False, username, password
+        return False, username, ""
+
+    if not password:
+        import secrets
+        import string
+        alphabet = string.ascii_letters + string.digits
+        password = "".join(secrets.choice(alphabet) for _ in range(12))
 
     user = User(username=username, real_name=username, role="admin", status="active")
     user.set_password(password)

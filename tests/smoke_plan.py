@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 """冒烟：合同要素 / 回款计划 / 经营看板 / 负责人筛选"""
+import os
 import re
 
 import requests
 
 BASE = "http://127.0.0.1:8081"
+ADMIN_USER = os.environ.get("CRM_TEST_ADMIN", "admin")
+ADMIN_PASS = os.environ.get("CRM_TEST_PASS", "")
+if not ADMIN_PASS:
+    raise SystemExit("请先设置 CRM_TEST_PASS 环境变量（被测实例的管理员口令）")
 s = requests.Session()
 s.trust_env = False
 
@@ -16,7 +21,7 @@ def token_of(html):
 
 r = s.get(BASE + "/login")
 tk = token_of(r.text)
-r = s.post(BASE + "/login", data={"username": "admin", "password": "admin123", "csrf_token": tk})
+r = s.post(BASE + "/login", data={"username": ADMIN_USER, "password": ADMIN_PASS, "csrf_token": tk})
 print("login ->", r.status_code)
 
 # ---- 1. 看板 ----

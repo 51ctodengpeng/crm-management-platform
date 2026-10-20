@@ -16,7 +16,13 @@ import requests
 
 BASE = os.environ.get("CRM_TEST_BASE", "http://127.0.0.1:8081")
 ADMIN_USER = os.environ.get("CRM_TEST_ADMIN", "admin")
-ADMIN_PASS = os.environ.get("CRM_TEST_PASS", "admin123")
+ADMIN_PASS = os.environ.get("CRM_TEST_PASS", "")
+if not ADMIN_PASS:
+    raise SystemExit(
+        "请先设置 CRM_TEST_PASS 环境变量（被测实例的管理员口令）\n"
+        "  Windows: set CRM_TEST_PASS=你的口令\n"
+        "  Linux/macOS: export CRM_TEST_PASS=你的口令"
+    )
 
 # 桌面 Chrome 的 UA：用于验证「桌面浏览器 · Chrome 版本 · Windows」的归一化结果
 CHROME_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "

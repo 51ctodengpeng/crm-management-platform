@@ -1,7 +1,9 @@
-# 客户管理系统（Flask + SQLite）
+# CRM 客户管理系统（Flask + SQLite）
 
 轻量内部 CRM：客户信息、项目记录，支持上传合同 / 发票 / Word / PPT 等附件。
 文件存本地磁盘，数据库只存元信息；**界面为腾讯云风格淡蓝科技主题**。
+
+> 仓库名 `crm-management-platform` 与配套的 `ad-management-platform` 保持同一命名风格，便于在仓库列表里一眼归组。
 
 ## 快速开始（打包成 EXE，推荐给非技术用户）
 
@@ -26,11 +28,13 @@ build_exe.bat
 ```bat
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\python init_db.py        :: 建表 + 创建管理员 admin / admin123
+.venv\Scripts\python init_db.py        :: 建表 + 创建管理员（口令随机生成并打印一次）
 .venv\Scripts\python desktop.py        :: 启动（与 EXE 行为一致）
 ```
 
-浏览器访问 **http://127.0.0.1:8081** ，默认账号 `admin` / `admin123`（登录后请立即在「修改密码」中更换）。
+浏览器访问 **http://127.0.0.1:8081** ，默认账号 `admin`，初始口令在首次初始化时随机生成并在控制台打印一次（登录后请立即在「修改密码」中更换）。
+
+如需指定初始口令，运行前设置环境变量 `CRM_ADMIN_PASSWORD` 即可（生产环境推荐这种方式，并由密钥管理系统注入）；不设置则走随机生成，不会出现全网通用的固定口令。
 
 也可以直接双击 `run.bat` 一键启动。启动时自动执行自举（建表 / 补列 / 建默认管理员），无需手动初始化。
 

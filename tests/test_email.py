@@ -20,6 +20,9 @@ os.environ["CRM_DB_PATH"] = str(TMP / "crm.db")
 os.environ["CRM_UPLOAD_DIR"] = str(TMP / "uploads")
 os.environ["CRM_AVATAR_DIR"] = str(TMP / "avatars")
 os.environ["CRM_DATA_DIR"] = str(TMP)
+# 本脚本在临时库上自举一个管理员，口令由环境变量注入，避免任何固定默认口令
+os.environ["CRM_ADMIN_PASSWORD"] = "TestOnly_%s" % TMP.name[-6:]
+ADMIN_PASS = os.environ["CRM_ADMIN_PASSWORD"]
 
 import smtplib  # noqa: E402
 
@@ -81,7 +84,7 @@ def login(username, password):
 
 def main():
     # ---------- 管理员登录 ----------
-    r = login("admin", "admin123")
+    r = login("admin", ADMIN_PASS)
     check("管理员登录成功", "经营概览" in r.text)
 
     # ---------- 邮件设置页可访问 ----------
@@ -231,7 +234,7 @@ def main():
 
     # ---------- 重要操作邮件通知 ----------
     client.get("/logout")
-    login("admin", "admin123")
+    login("admin", ADMIN_PASS)
     with app.app_context():
         admin_user = db.session.scalar(db.select(User).where(User.username == "admin"))
         admin_user.email = "admin@test.local"     # 通知只发给有邮箱的管理员

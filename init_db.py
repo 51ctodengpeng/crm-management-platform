@@ -2,7 +2,7 @@
 """初始化脚本：建表 + 创建管理员账号 + 生成目录
 
 用法：
-    python init_db.py                  # 默认 admin / admin123
+    python init_db.py                  # 账号 admin，密码随机生成并打印一次
     python init_db.py 账号 密码         # 自定义账号密码
 """
 import sys
@@ -15,7 +15,15 @@ from models import User
 
 def main():
     username = sys.argv[1] if len(sys.argv) > 1 else "admin"
-    password = sys.argv[2] if len(sys.argv) > 2 else "admin123"
+    password = sys.argv[2] if len(sys.argv) > 2 else ""
+    generated = False
+    if not password:
+        import secrets
+        import string
+
+        alphabet = string.ascii_letters + string.digits
+        password = "".join(secrets.choice(alphabet) for _ in range(12))
+        generated = True
 
     Config.ensure_dirs()
 
@@ -47,6 +55,8 @@ def main():
             db.session.add(user)
             db.session.commit()
             print(f"[2/3] 管理员已创建：{username} / {password}（角色=管理员，状态=已启用）")
+            if generated:
+                print("      [!] 以上口令为随机生成，仅显示这一次，请立即登录并修改。")
 
         print(f"[3/3] 附件目录已就绪 -> {Config.UPLOAD_FOLDER}")
         print("\n初始化完成，启动命令：python app.py  然后访问 http://127.0.0.1:8081")

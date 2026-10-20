@@ -403,7 +403,9 @@ class Config:
 
     # 首次运行自动创建的管理员（仅在账号表为空时生效）
     DEFAULT_ADMIN_USERNAME = os.environ.get("CRM_ADMIN_USER", "admin")
-    DEFAULT_ADMIN_PASSWORD = os.environ.get("CRM_ADMIN_PASSWORD", "admin123")
+    # 留空表示不设固定口令：首次初始化时随机生成 12 位密码，并在控制台输出一次。
+    # 生产环境建议通过 CRM_ADMIN_PASSWORD 环境变量显式注入。
+    DEFAULT_ADMIN_PASSWORD = os.environ.get("CRM_ADMIN_PASSWORD", "")
 
     @staticmethod
     def ensure_dirs():

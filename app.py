@@ -697,9 +697,12 @@ def create_app(config_object=Config) -> Flask:
 
     @app.cli.command("create-admin")
     @click.argument("username", default="admin")
-    @click.argument("password", default="admin123")
+    @click.argument("password", default="")
     def create_admin(username, password):
-        """创建管理员账号：flask create-admin [用户名] [密码]"""
+        """创建管理员账号：flask create-admin [用户名] [密码]
+
+        不传密码时随机生成 12 位口令并打印一次，避免出现全网通用的固定初始口令。
+        """
         db.create_all()
         exists = db.session.scalar(db.select(User).where(User.username == username))
         if exists:
@@ -707,11 +710,21 @@ def create_app(config_object=Config) -> Flask:
             db.session.commit()
             click.echo(f"[OK] 用户 {username} 已存在，已提升为管理员并启用")
             return
+        generated = False
+        if not password:
+            import secrets
+            import string
+
+            alphabet = string.ascii_letters + string.digits
+            password = "".join(secrets.choice(alphabet) for _ in range(12))
+            generated = True
         u = User(username=username, role="admin", status="active", real_name=username)
         u.set_password(password)
         db.session.add(u)
         db.session.commit()
         click.echo(f"[OK] 管理员已创建：{username} / {password}")
+        if generated:
+            click.echo("[!] 以上口令为随机生成，仅显示这一次，请立即登录并修改。")
 
     return app
 
@@ -725,6 +738,12 @@ BOOTSTRAP_RESULT = _bootstrap(app)
 
 if __name__ == "__main__":
     port = int(os.environ.get("CRM_PORT", 8081))
+    if BOOTSTRAP_RESULT.get("created_admin"):
+        print("=" * 58)
+        print("  首次运行，已自动创建管理员账号：")
+        print(f"      账号 {BOOTSTRAP_RESULT['username']}   密码 {BOOTSTRAP_RESULT['password']}")
+        print("  该密码仅显示这一次，请登录后立即修改。")
+        print("=" * 58)
     # 调试器只在显式声明非生产环境时才允许打开：Werkzeug 调试控制台可在服务器上执行任意代码，
     # 生产环境（CRM_ENV=prod，部署脚本已写入）即使误设 CRM_DEBUG=1 也不会暴露。
     debug = os.environ.get("CRM_DEBUG", "0") == "1" and os.environ.get("CRM_ENV") != "prod"
