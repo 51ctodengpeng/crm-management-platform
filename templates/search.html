@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}搜索结果{% endblock %}
+{% block page_title %}搜索结果{% endblock %}
+{% block page_sub %}
+  {% if keyword %}
+    关键字「{{ keyword }}」· 命中 {{ customers|length }} 个客户、{{ projects|length }} 个项目
+  {% else %}
+    在顶部搜索框输入客户名、联系人、项目名或微信即可全局检索
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if keyword %}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-people"></i> 匹配的客户（{{ customers|length }}）</div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>公司名称</th><th>对接人</th><th>联系电话</th><th>微信</th><th>来源渠道</th><th>所在地区</th><th class="text-center">项目</th></tr>
+        </thead>
+        <tbody>
+          {% for c in customers %}
+            <tr>
+              <td><a class="company-link" href="{{ url_for('customer.detail', cid=c.id) }}">{{ c.company_name }}</a></td>
+              <td>{{ c.contact_name or '-' }}</td>
+              <td>{{ c.contact_phone or '-' }}</td>
+              <td>{{ c.wechat or '-' }}</td>
+              <td>{% if c.source_channel %}<span class="badge-soft">{{ c.source_channel }}</span>{% else %}-{% endif %}</td>
+              <td>{{ c.region or '-' }}</td>
+              <td class="text-center">{{ c.project_count }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" class="empty-state"><i class="bi bi-search"></i>没有匹配的客户</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-kanban"></i> 匹配的项目（{{ projects|length }}）</div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>项目名称</th><th>所属客户</th><th>类型</th><th class="text-end">金额</th><th>状态</th><th class="text-center">附件</th></tr>
+        </thead>
+        <tbody>
+          {% for p in projects %}
+            <tr>
+              <td><a class="company-link" href="{{ url_for('project.detail', pid=p.id) }}">{{ p.project_name }}</a></td>
+              <td>{{ p.customer.company_name }}</td>
+              <td>{{ p.project_type or '-' }}</td>
+              <td class="text-end num">¥ {{ p.project_amount | money }}</td>
+              <td><span class="badge-soft {{ p.status_color }}">{{ p.project_status }}</span></td>
+              <td class="text-center">{{ p.attachment_count }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="empty-state"><i class="bi bi-search"></i>没有匹配的项目</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-body empty-state">
+      <i class="bi bi-search"></i>
+      输入关键字后回车即可同时在客户与项目中检索
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

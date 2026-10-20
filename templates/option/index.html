@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}选项管理{% endblock %}
+{% block page_title %}选项管理{% endblock %}
+{% block page_sub %}统一维护客户类型、项目类型等下拉条目 · 保存后前台表单即时生效{% endblock %}
+
+{% block actions %}
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('settings.index') }}">
+  <i class="bi bi-gear"></i> 系统设置
+</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="alert alert-info py-2 small d-flex align-items-start gap-2 opt-tip">
+  <i class="bi bi-info-circle-fill mt-1"></i>
+  <div>
+    <strong>改动规则：</strong>
+    停用后该条目不再出现在新建、编辑和筛选下拉中，历史记录仍保留原值；
+    删除前会检查引用条数，仍被数据使用时会阻止删除；
+    改名可勾选「同步更新历史记录」，不勾选则旧记录保留旧值。
+    表单里的「自定义…」只作用于当前这条记录，<strong>不会</strong>写入本字典。
+  </div>
+</div>
+
+<div class="opt-tabs">
+  {% set ns = namespace(group='') %}
+  {% for c in categories %}
+    {% if c.group != ns.group %}
+      {% if not loop.first %}</div>{% endif %}
+      {% set ns.group = c.group %}
+      <span class="opt-tabs__label">{{ c.group }}</span><div class="opt-tabs__group">
+    {% endif %}
+    <a class="opt-tab" href="#cat-{{ c.key }}">
+      {{ c.label }}
+      <span class="opt-tab__count">{{ c.enabled_count }}/{{ c.total }}</span>
+    </a>
+    {% if loop.last %}</div>{% endif %}
+  {% endfor %}
+</div>
+
+{% for c in categories %}
+<section class="card opt-card" id="cat-{{ c.key }}">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-list-ul"></i> {{ c.label }}
+      <span class="opt-cat-key">{{ c.key }}</span>
+    </span>
+    <span class="text-muted" style="font-size:12px;font-weight:400">{{ c.desc }}</span>
+  </div>
+
+  <div class="opt-add">
+    <form method="post" action="{{ url_for('option.add') }}" class="opt-add__form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="category" value="{{ c.key }}">
+      <input type="text" name="name" class="form-control form-control-sm" maxlength="32"
+             placeholder="新增「{{ c.label }}」，例：数据库运维" required>
+      <input type="text" name="remark" class="form-control form-control-sm" maxlength="120"
+             placeholder="备注（可选，仅后台可见）">
+      {% if c.extra_kind == 'transfer' %}
+        <label class="opt-check" title="勾选后，该付款方式登记收款时必须填交易流水号，并参与转账对账">
+          <input class="form-check-input" type="checkbox" name="is_transfer" value="1"> 需流水号
+        </label>
+      {% elif c.extra_kind == 'status_kind' %}
+        <select name="status_kind" class="form-select form-select-sm" style="max-width:138px" title="状态语义">
+          <option value="pending">待开始（灰）</option>
+          <option value="running">进行中（橙）</option>
+          <option value="success">已完成（绿）</option>
+          <option value="failed">已终止（红）</option>
+          <option value="other" selected>其他（灰）</option>
+        </select>
+      {% elif c.extra_kind == 'level_color' %}
+        <select name="level_color" class="form-select form-select-sm" style="max-width:118px" title="徽标颜色">
+          <option value="red">红色</option>
+          <option value="orange">橙色</option>
+          <option value="blue">蓝色</option>
+          <option value="green">绿色</option>
+          <option value="cyan">青色</option>
+          <option value="gray" selected>灰色</option>
+        </select>
+      {% endif %}
+      <label class="opt-check">
+        <input class="form-check-input" type="checkbox" name="is_default" value="1"> 设为默认
+      </label>
+      <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-plus-lg"></i> 新增</button>
+    </form>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table opt-table">
+      <thead>
+        <tr>
+          <th style="width:82px">顺序</th>
+          <th style="width:26%">选项名称</th>
+          <th>备注</th>
+          <th style="width:78px" class="text-center">使用量</th>
+          <th style="width:74px" class="text-center">状态</th>
+          <th style="width:66px" class="text-center">默认</th>
+          <th style="width:210px" class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in c.rows %}
+          {% set it = row.item %}
+          <tr class="{% if not it.enabled %}is-off{% endif %}">
+            <td>
+              <div class="opt-move">
+                <form method="post" action="{{ url_for('option.move', item_id=it.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="direction" value="up">
+                  <button class="opt-move__btn" type="submit" title="上移"
+                          {% if it.builtin or loop.first %}disabled{% endif %}>
+                    <i class="bi bi-chevron-up"></i>
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('option.move', item_id=it.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="direction" value="down">
+                  <button class="opt-move__btn" type="submit" title="下移"
+                          {% if it.builtin %}disabled{% endif %}>
+                    <i class="bi bi-chevron-down"></i>
+                  </button>
+                </form>
+                <span class="opt-sort">{{ it.sort_order }}</span>
+              </div>
+            </td>
+            <td>
+              <form id="f{{ it.id }}" method="post" action="{{ url_for('option.edit', item_id=it.id) }}"></form>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" form="f{{ it.id }}">
+              <input type="text" name="name" value="{{ it.name }}" maxlength="32"
+                     class="form-control form-control-sm" form="f{{ it.id }}"
+                     {% if it.builtin %}readonly title="内置兜底选项，名称不可修改"{% endif %}>
+              {% if it.builtin %}<span class="opt-tag">内置</span>{% endif %}
+              {% if c.extra_kind == 'transfer' and it.extra == 'transfer' %}
+                <span class="opt-tag">需流水号</span>
+              {% elif c.extra_kind == 'status_kind' and it.extra %}
+                <span class="opt-tag">{{ {'pending':'待开始','running':'进行中','success':'已完成','failed':'已终止','other':'其他'}.get(it.extra, it.extra) }}</span>
+              {% elif c.extra_kind == 'level_color' and it.extra %}
+                <span class="opt-tag">颜色：{{ {'red':'红','orange':'橙','blue':'蓝','green':'绿','cyan':'青','gray':'灰'}.get(it.extra, it.extra) }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <input type="text" name="remark" value="{{ it.remark or '' }}" maxlength="120"
+                     class="form-control form-control-sm" form="f{{ it.id }}"
+                     placeholder="—">
+              {% if c.extra_kind == 'transfer' %}
+                <label class="opt-subcheck" title="需流水号的方式登记收款时必须填交易流水号，并参与转账对账">
+                  <input class="form-check-input" type="checkbox" name="is_transfer" value="1"
+                         form="f{{ it.id }}" {% if it.extra == 'transfer' %}checked{% endif %}> 需流水号
+                </label>
+              {% elif c.extra_kind == 'status_kind' %}
+                <select name="status_kind" class="form-select form-select-sm mt-1" form="f{{ it.id }}"
+                        style="max-width:138px" title="状态语义（影响概览统计与徽标颜色）">
+                  {% for k, label in [('pending','待开始（灰）'),('running','进行中（橙）'),('success','已完成（绿）'),('failed','已终止（红）'),('other','其他（灰）')] %}
+                    <option value="{{ k }}" {% if (it.extra or 'other') == k %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              {% elif c.extra_kind == 'level_color' %}
+                <select name="level_color" class="form-select form-select-sm mt-1" form="f{{ it.id }}"
+                        style="max-width:118px" title="徽标颜色">
+                  {% for k, label in [('red','红色'),('orange','橙色'),('blue','蓝色'),('green','绿色'),('cyan','青色'),('gray','灰色')] %}
+                    <option value="{{ k }}" {% if (it.extra or 'gray') == k %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              {% endif %}
+              <label class="opt-subcheck" title="勾选后，改名会同步更新已有业务数据里的旧值">
+                <input class="form-check-input" type="checkbox" name="cascade" value="1"
+                       form="f{{ it.id }}" checked> 改名同步历史记录
+              </label>
+            </td>
+            <td class="text-center">
+              {% if row.usage %}
+                <a class="opt-usage" href="{{ url_for('option.index') }}#cat-{{ c.key }}"
+                   title="已有 {{ row.usage }} 条数据使用该值">{{ row.usage }}</a>
+              {% else %}
+                <span class="text-muted">0</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <span class="badge-soft {{ 'green' if it.enabled else 'gray' }}">{{ '启用' if it.enabled else '停用' }}</span>
+            </td>
+            <td class="text-center">
+              <input class="form-check-input" type="checkbox" name="is_default" value="1"
+                     form="f{{ it.id }}" {% if it.is_default %}checked{% endif %}
+                     {% if not it.enabled %}disabled title="停用项不能设为默认"{% endif %}>
+            </td>
+            <td class="text-end">
+              <div class="opt-actions">
+                <button class="btn btn-sm btn-light" type="submit" form="f{{ it.id }}"
+                        title="保存名称、备注与默认设置">保存</button>
+                <form method="post" action="{{ url_for('option.toggle', item_id=it.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm {{ 'btn-outline-secondary' if it.enabled else 'btn-outline-success' }}"
+                          type="submit" {% if it.builtin and it.enabled %}disabled
+                          title="兜底选项不能停用"{% endif %}>
+                    {{ '停用' if it.enabled else '启用' }}
+                  </button>
+                </form>
+                {% if it.builtin %}
+                  <button class="btn btn-sm btn-outline-danger" type="button" disabled title="内置兜底选项不能删除">删除</button>
+                {% else %}
+                  <form method="post" action="{{ url_for('option.delete', item_id=it.id) }}"
+                        data-confirm="确认删除选项「{{ it.name }}」？{% if row.usage %}该选项仍被 {{ row.usage }} 条数据使用，删除将被阻止。{% else %}删除后前台下拉不再出现该条目，操作不可撤销。{% endif %}"
+                        data-confirm-title="删除选项"
+                        data-confirm-ok="确认删除">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">删除</button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" class="empty-state">
+              <i class="bi bi-inbox"></i> 该类别还没有选项，请在上方新增
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if c.enabled_count == 0 %}
+    <div class="card-foot opt-warn">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      该类别当前没有启用中的选项，前台表单只会提供「自定义…」输入。
+    </div>
+  {% endif %}
+</section>
+{% endfor %}
+
+{% endblock %}

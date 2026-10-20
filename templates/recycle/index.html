@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}回收站{% endblock %}
+{% block page_title %}回收站{% endblock %}
+{% block page_sub %}
+  删除的客户与项目会先留在这里，可原样恢复；彻底删除才会清理附件文件
+{% endblock %}
+
+{% block actions %}
+{% if rows %}
+<form method="post" action="{{ url_for('recycle.clear') }}"
+      data-confirm="清空回收站会彻底删除这里所有记录，并清理对应的附件文件，操作不可恢复！"
+      data-confirm-title="清空回收站" data-confirm-ok="确认清空">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn-outline-danger btn-sm" type="submit">
+    <i class="bi bi-trash3"></i> 清空回收站
+  </button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<form class="filter-bar mb-3" method="get" action="{{ url_for('recycle.index') }}">
+  <div class="filter-item">
+    <label>类型</label>
+    <select name="kind" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">全部</option>
+      <option value="customer" {% if kind == 'customer' %}selected{% endif %}>客户</option>
+      <option value="project" {% if kind == 'project' %}selected{% endif %}>项目</option>
+    </select>
+  </div>
+  <div class="filter-item" style="flex:1">
+    <label>名称</label>
+    <input class="form-control form-control-sm" name="q" value="{{ keyword }}"
+           placeholder="输入客户或项目名称搜索">
+  </div>
+  <div class="filter-item">
+    <label>&nbsp;</label>
+    <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-search"></i> 查询</button>
+  </div>
+  <div class="ms-auto text-muted" style="font-size:12.5px">
+    共 {{ rows | length }} 条 · 占用 {{ (total_size / 1024 / 1024) | round(1) }} MB
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-wrap">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>名称</th>
+            <th style="width:70px">类型</th>
+            <th>包含内容</th>
+            <th style="width:80px">附件</th>
+            <th style="width:150px">删除人 / 时间</th>
+            <th style="width:160px" class="text-end">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>
+                <span class="fw-semibold">{{ r.title }}</span>
+                <div class="cell-sub">原 ID #{{ r.origin_id }}</div>
+              </td>
+              <td><span class="badge-soft {{ 'blue' if r.kind == 'customer' else 'purple' }}">{{ r.kind_label }}</span></td>
+              <td class="text-muted" style="font-size:12.5px">
+                {% if r.kind == 'customer' %}
+                  {{ detail.get(r.id, {}).get('projects', 0) }} 个项目 ·
+                  {{ detail.get(r.id, {}).get('followups', 0) }} 条跟进
+                {% else %}
+                  {{ detail.get(r.id, {}).get('payments', 0) }} 笔收款 ·
+                  {{ detail.get(r.id, {}).get('plans', 0) }} 期计划
+                {% endif %}
+              </td>
+              <td class="text-muted num">{{ r.file_count or 0 }} 个<div class="cell-sub">{{ r.size_human }}</div></td>
+              <td class="text-muted" style="font-size:12.5px">
+                {{ r.deleted_by or '-' }}
+                <div class="cell-sub">{{ r.deleted_at | dt }}</div>
+              </td>
+              <td class="text-end">
+                <form method="post" action="{{ url_for('recycle.restore_row', rid=r.id) }}" class="d-inline"
+                      data-confirm="恢复「{{ r.title }}」到系统中？附件会自动重新关联。">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline-primary" type="submit">
+                    <i class="bi bi-arrow-counterclockwise"></i> 恢复
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('recycle.purge_row', rid=r.id) }}" class="d-inline"
+                      data-confirm="彻底删除「{{ r.title }}」？相关附件文件也会被清理，无法恢复。">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-center text-muted py-5">
+              <i class="bi bi-inbox" style="font-size:26px;display:block;margin-bottom:8px"></i>
+              回收站是空的，删除的客户与项目会出现在这里
+            </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

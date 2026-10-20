@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% block title %}经营概览{% endblock %}
+{% block page_title %}经营概览{% endblock %}
+{% block page_sub %}客户 · 项目 · 附件 · 渠道来源 数据总览{% endblock %}
+
+{% block actions %}
+{% if can_create_data() %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('customer.new_customer') }}"><i class="bi bi-plus-lg"></i> 新增客户</a>
+  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('project.new_project') }}"><i class="bi bi-plus-lg"></i> 新增项目</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% if DASHBOARD_NOTICE %}
+  <div class="alert alert-info py-2 small d-flex align-items-center gap-2">
+    <i class="bi bi-megaphone-fill"></i>
+    <span>{{ DASHBOARD_NOTICE }}</span>
+  </div>
+{% endif %}
+
+{% if current_user.is_admin and pending_list %}
+  <div class="approve-banner">
+    <div class="ab-icon"><i class="bi bi-shield-check"></i></div>
+    <div class="ab-text">
+      有 <strong>{{ pending_list|length }}</strong> 个账号正在等待审批：
+      {% for u in pending_list[:3] %}<span class="badge-soft ms-1">{{ u.display_name }}</span>{% endfor %}
+      {% if pending_list|length > 3 %}<span class="text-muted">等</span>{% endif %}
+      <div class="text-muted" style="font-size:11.5px">通过后该账号才能登录系统</div>
+    </div>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('user.list_users', status='pending') }}">前往审批</a>
+  </div>
+{% endif %}
+
+{% if TODO.total or TODO.pending_pay %}
+<div class="todo-strip">
+  <span class="ts-title"><i class="bi bi-bell-fill"></i> 今日待办</span>
+  <a href="{{ url_for('todo.index') }}#sec-follow" class="ts-item {% if TODO.follow_count %}is-warn{% endif %}">
+    跟进到期 <strong>{{ TODO.follow_count }}</strong>
+  </a>
+  <a href="{{ url_for('todo.index') }}#sec-project" class="ts-item {% if TODO.project_count %}is-warn{% endif %}">
+    项目到期 <strong>{{ TODO.project_count }}</strong>
+  </a>
+  <a href="{{ url_for('todo.index') }}#sec-ar" class="ts-item {% if TODO.ar_count %}is-danger{% endif %}">
+    应收逾期 <strong>{{ TODO.ar_count }}</strong>
+  </a>
+  <a href="{{ url_for('finance.reconcile', status='pending') }}" class="ts-item {% if TODO.pending_pay %}is-info{% endif %}">
+    待对账 <strong>{{ TODO.pending_pay }}</strong>
+  </a>
+  <a class="ts-more" href="{{ url_for('todo.index') }}">查看全部 →</a>
+</div>
+{% endif %}
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.customers }}</div>
+      <div class="stat-label">客户总数</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon purple"><i class="bi bi-kanban-fill"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.projects }}</div>
+      <div class="stat-label">项目总数</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="bi bi-cash-coin"></i></div>
+    <div>
+      <div class="stat-value">¥ {{ '{:,.0f}'.format(stats.amount) }}</div>
+      <div class="stat-label">累计合同金额</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon orange"><i class="bi bi-hourglass-split"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.running }}</div>
+      <div class="stat-label">进行中项目</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon cyan"><i class="bi bi-paperclip"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.attachments }}</div>
+      <div class="stat-label">附件总数</div>
+    </div>
+  </div>
+</div>
+
+
+<div class="money-tiles mt-3">
+  <div class="money-tile">
+    <span class="label">应收合计（含税）</span>
+    <span class="value num">¥ {{ money_stats.receivable | money }}</span>
+  </div>
+  <div class="money-tile">
+    <span class="label">已对账收款</span>
+    <span class="value num c-green">¥ {{ money_stats.matched | money }}</span>
+  </div>
+  <div class="money-tile">
+    <span class="label">未收金额</span>
+    <span class="value num c-orange">¥ {{ money_stats.unsettled | money }}</span>
+  </div>
+  <div class="money-tile">
+    <span class="label">其中已逾期（{{ money_stats.overdue_count }} 个项目）</span>
+    <span class="value num c-red">¥ {{ money_stats.overdue | money }}</span>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-graph-up"></i> 近 6 个月签约与回款</span>
+        <span class="text-muted" style="font-size:11.5px;font-weight:400">单位：万元 · 含税口径</span>
+      </div>
+      <div class="card-body">
+        {% for t in trend %}
+          <div class="trend-month">{{ t.month }}</div>
+          <div class="bar-row">
+            <div class="bar-name">签约</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: {{ (t.signed / trend_max * 100) | round(1) }}%"></div>
+            </div>
+            <div class="bar-value">{{ '%.1f' | format(t.signed / 10000) }}</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-name">回款</div>
+            <div class="bar-track">
+              <div class="bar-fill bar-fill--green" style="width: {{ (t.received / trend_max * 100) | round(1) }}%"></div>
+            </div>
+            <div class="bar-value">{{ '%.1f' | format(t.received / 10000) }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-hourglass-split"></i> 应收账龄</div>
+      <div class="card-body">
+        {% for a in aging %}
+          <div class="bar-row">
+            <div class="bar-name">{{ a.label }}</div>
+            <div class="bar-track">
+              <div class="bar-fill {% if a.label.startswith('逾期 90') %}bar-fill--red{% elif a.label.startswith('逾期') %}bar-fill--orange{% endif %}"
+                   style="width: {{ (a.amount / aging_max * 100) | round(1) }}%"></div>
+            </div>
+            <div class="bar-value">{{ '%.1f' | format(a.amount / 10000) }} 万</div>
+          </div>
+        {% endfor %}
+        <hr class="my-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="small text-muted">负责人业绩 Top 5</span>
+          <a class="small" href="{{ url_for('project.list_projects') }}">全部项目 →</a>
+        </div>
+        <div class="table-wrap">
+          <table class="table table-sm">
+            <thead><tr><th>负责人</th><th class="text-center">项目</th><th class="text-end">签约额（万）</th></tr></thead>
+            <tbody>
+              {% for r in owner_rank %}
+                <tr>
+                  <td><a href="{{ url_for('project.list_projects', owner=r.owner) }}">{{ r.owner }}</a></td>
+                  <td class="text-center">{{ r.count }}</td>
+                  <td class="text-end num">{{ '%.1f' | format(r.amount / 10000) }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="3" class="text-muted text-center py-2">暂无数据</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-diagram-3"></i> 客户来源渠道分布</div>
+      <div class="card-body">
+        {% if channel_stats %}
+          {% for name, count in channel_stats %}
+            <div class="bar-row">
+              <div class="bar-name" title="{{ name }}">{{ name }}</div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width: {{ (count / max_channel * 100) | round(1) }}%"></div>
+              </div>
+              <div class="bar-value">{{ count }}</div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-muted small py-3 text-center">暂无客户数据</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-pie-chart"></i> 项目状态分布</div>
+      <div class="card-body">
+        {% for name, count in status_stats.items() %}
+          <div class="bar-row">
+            <div class="bar-name">{{ name }}</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: {{ (count / max_status * 100) | round(1) }}%"></div>
+            </div>
+            <div class="bar-value">{{ count }}</div>
+          </div>
+        {% endfor %}
+        <hr class="my-3">
+        <div class="d-flex justify-content-between small">
+          <span class="text-muted">{{ stats.year }} 年度新增合同金额</span>
+          <strong class="num">¥ {{ '{:,.2f}'.format(stats.year_amount) }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i> 最近项目</span>
+        <a class="small" href="{{ url_for('project.list_projects') }}">全部项目 →</a>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>项目名称</th><th>客户</th><th>状态</th><th class="text-end">金额</th><th class="text-center">附件</th></tr>
+          </thead>
+          <tbody>
+            {% for p in recent_projects %}
+              <tr>
+                <td><a class="company-link" href="{{ url_for('project.detail', pid=p.id) }}">{{ p.project_name }}</a></td>
+                <td>{{ p.customer.company_name }}</td>
+                <td><span class="badge-soft {{ p.status_color }}">{{ p.project_status }}</span></td>
+                <td class="text-end num">¥ {{ '{:,.2f}'.format(p.project_amount or 0) }}</td>
+                <td class="text-center">
+                  {% if p.attachment_count %}
+                    <span class="badge-soft"><i class="bi bi-paperclip"></i> {{ p.attachment_count }}</span>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="5" class="empty-state"><i class="bi bi-inbox"></i>
+                {% if can_create_data() %}还没有项目记录，去 <a href="{{ url_for('project.new_project') }}">新增项目</a>
+                {% else %}暂无可见的项目记录{% endif %}
+              </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-building"></i> 客户行业分布（Top 5）</div>
+      <div class="card-body">
+        {% if type_rows %}
+          {% for name, count in type_rows %}
+            <div class="bar-row">
+              <div class="bar-name">{{ name or '未填写' }}</div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width: {{ (count / max_type * 100) | round(1) }}%"></div>
+              </div>
+              <div class="bar-value">{{ count }}</div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-muted small py-3 text-center">暂无客户数据</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-activity"></i> 最近操作动态</span>
+    <a class="small" href="{{ url_for('logs') }}">全部日志 →</a>
+  </div>
+  <div class="card-body pt-2">
+    {% for log in recent_logs %}
+      <div class="d-flex justify-content-between align-items-start py-2 border-bottom" style="border-color:#eef2f8!important">
+        <div>
+          <span class="badge-soft {{ log.action_color }}">{{ log.action }}</span>
+          <span class="ms-1 small">{{ log.detail or log.target_type }}</span>
+        </div>
+        <div class="text-muted" style="font-size:11.5px;white-space:nowrap">
+          {{ log.create_time | dt('%m-%d %H:%M') }}
+        </div>
+      </div>
+    {% else %}
+      <div class="text-muted small text-center py-4">暂无操作记录</div>
+    {% endfor %}
+  </div>
+</div>
+
+{# ---------- 开发团队与技术栈展示 ---------- #}
+<section class="team-panel">
+  <div class="team-panel__main">
+    <div class="tp-logo"><i class="bi bi-terminal-fill"></i></div>
+    <div class="flex-grow-1 min-w-0">
+      <h3 class="tp-title">PowerShell 中文社区团队</h3>
+      <p class="tp-desc">
+        本系统由 PowerShell 中文社区团队开发并提供技术支持，聚焦中小企业客户与合同管理的轻量化落地：
+        客户档案、项目台账、合同附件、收款对账与操作审计一体化，本地部署、数据自持。
+      </p>
+      <div class="tp-links">
+        <a href="https://www.powershell.com.cn" target="_blank" rel="noopener noreferrer">
+          <i class="bi bi-globe2"></i> www.powershell.com.cn
+        </a>
+        <a href="mailto:dengpeng@powershell.com.cn" title="技术支持邮箱">
+          <i class="bi bi-envelope"></i> dengpeng@powershell.com.cn
+        </a>
+        {% if current_user.is_authenticated and current_user.is_admin %}
+          <a href="{{ url_for('settings.index') }}"><i class="bi bi-sliders"></i> 系统设置</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="team-panel__tech">
+    <div class="tp-tech-title">技术栈 TECHNICAL STACK</div>
+    <div class="tp-tags">
+      <span class="tp-tag tp-tag--main">Python 3.13</span>
+      <span class="tp-tag tp-tag--main">Flask 3.1</span>
+      <span class="tp-tag">SQLAlchemy 3.1</span>
+      <span class="tp-tag">SQLite</span>
+      <span class="tp-tag">Jinja2</span>
+      <span class="tp-tag">Bootstrap 5.3</span>
+      <span class="tp-tag">Waitress</span>
+      <span class="tp-tag">Flask-Login</span>
+      <span class="tp-tag">SMTP / SSL</span>
+      <span class="tp-tag">PyInstaller</span>
+    </div>
+    <div class="tp-note">
+      单文件可执行 + 本地数据目录，离线可用；反馈问题请附操作时间与页面名称，便于对照操作日志定位。
+    </div>
+  </div>
+</section>
+{% endblock %}

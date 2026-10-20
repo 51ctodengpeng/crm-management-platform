@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}待办提醒{% endblock %}
+{% block page_title %}待办提醒{% endblock %}
+{% block page_sub %}
+  跟进到期 {{ todo.follow_count }} · 项目到期 {{ todo.project_count }} ·
+  应收逾期 {{ todo.ar_count }}（¥ {{ todo.ar_amount | money }}） · 待对账 {{ todo.pending_pay }} 笔
+{% endblock %}
+
+{% block actions %}
+<form method="post" action="{{ url_for('todo.notify') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn-outline-primary btn-sm" type="submit"
+          data-confirm="将当前待办汇总发送到你的邮箱（{{ current_user.email or '未填写' }}），确认发送？"
+          data-confirm-title="发送待办提醒" data-confirm-ok="发送">
+    <i class="bi bi-envelope"></i> 发送到我的邮箱
+  </button>
+</form>
+{% endblock %}
+
+{% block content %}
+
+<div class="todo-grid">
+  <a class="todo-tile {% if todo.follow_count %}is-warn{% endif %}" href="#sec-follow">
+    <span class="todo-tile__icon"><i class="bi bi-person-lines-fill"></i></span>
+    <span class="todo-tile__value num">{{ todo.follow_count }}</span>
+    <span class="todo-tile__label">跟进到期</span>
+    <span class="todo-tile__hint">下次跟进日期已到或逾期</span>
+  </a>
+  <a class="todo-tile {% if todo.project_count %}is-warn{% endif %}" href="#sec-project">
+    <span class="todo-tile__icon"><i class="bi bi-calendar-check"></i></span>
+    <span class="todo-tile__value num">{{ todo.project_count }}</span>
+    <span class="todo-tile__label">项目即将到期</span>
+    <span class="todo-tile__hint">7 天内结束且未验收/终止</span>
+  </a>
+  <a class="todo-tile {% if todo.ar_count %}is-danger{% endif %}" href="#sec-ar">
+    <span class="todo-tile__icon"><i class="bi bi-exclamation-octagon"></i></span>
+    <span class="todo-tile__value num">{{ todo.ar_count }}</span>
+    <span class="todo-tile__label">应收逾期</span>
+    <span class="todo-tile__hint">已过账期仍未收齐 ¥ {{ todo.ar_amount | money }}</span>
+  </a>
+  <a class="todo-tile {% if todo.pending_pay %}is-info{% endif %}" href="{{ url_for('finance.reconcile', status='pending') }}">
+    <span class="todo-tile__icon"><i class="bi bi-cash-stack"></i></span>
+    <span class="todo-tile__value num">{{ todo.pending_pay }}</span>
+    <span class="todo-tile__label">待对账收款</span>
+    <span class="todo-tile__hint">已登记但尚未核对流水</span>
+  </a>
+</div>
+
+{% if not todo.follow_count and not todo.project_count and not todo.ar_count %}
+  <div class="card mt-3">
+    <div class="empty-state py-5">
+      <i class="bi bi-emoji-smile"></i>
+      当前没有到期的跟进、项目或应收，保持节奏即可。
+    </div>
+  </div>
+{% endif %}
+
+{# ---------------- 跟进到期 ---------------- #}
+{% if todo.follow_count %}
+<section class="card mt-3" id="sec-follow">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-person-lines-fill"></i> 跟进到期（{{ todo.follow_count }}）</span>
+    <span class="text-muted" style="font-size:12px;font-weight:400">按计划日期从早到晚</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>客户</th><th>等级</th><th>负责人</th><th>最近跟进</th><th>计划跟进</th><th>状态</th><th class="text-end">操作</th></tr>
+      </thead>
+      <tbody>
+        {% for c in todo.follow_rows %}
+          <tr>
+            <td>
+              <a class="company-link" href="{{ url_for('customer.detail', cid=c.id) }}">{{ c.company_name }}</a>
+              <div class="th-sub">{{ c.contact_name or '未填写对接人' }}{% if c.contact_phone %} · {{ c.contact_phone }}{% endif %}</div>
+            </td>
+            <td><span class="badge-soft {{ level_color(c.customer_level) }}">{{ c.customer_level or '普通' }}</span></td>
+            <td>{{ c.owner or '—' }}</td>
+            <td class="mono" style="font-size:12.5px">
+              {{ c.last_follow_at | dt('%Y-%m-%d') if c.last_follow_at else '从未跟进' }}
+              {% if c.days_since_follow is not none %}<div class="th-sub">距今 {{ c.days_since_follow }} 天</div>{% endif %}
+            </td>
+            <td class="mono">{{ c.next_follow_at | dt('%Y-%m-%d') }}</td>
+            <td><span class="badge-soft red">{{ c.follow_state }}</span></td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('customer.detail', cid=c.id) }}#followups">写跟进</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{# ---------------- 项目到期 ---------------- #}
+{% if todo.project_count %}
+<section class="card mt-3" id="sec-project">
+  <div class="card-header"><i class="bi bi-calendar-check"></i> 项目即将到期（{{ todo.project_count }}）</div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>项目</th><th>客户</th><th>负责人</th><th>结束日期</th><th>状态</th><th class="text-end">未收金额</th><th class="text-end">操作</th></tr>
+      </thead>
+      <tbody>
+        {% for p in todo.project_rows %}
+          <tr>
+            <td><a class="company-link" href="{{ url_for('project.detail', pid=p.id) }}">{{ p.project_name }}</a></td>
+            <td>{{ p.customer.company_name | shortname(20) }}</td>
+            <td>{{ p.owner or '—' }}</td>
+            <td class="mono">{{ p.end_date | dt('%Y-%m-%d') }}</td>
+            <td><span class="badge-soft {{ p.status_color }}">{{ p.project_status }}</span></td>
+            <td class="text-end num">¥ {{ p.unsettled_amount | money }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('project.detail', pid=p.id) }}">查看</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{# ---------------- 应收逾期 ---------------- #}
+{% if todo.ar_count %}
+<section class="card mt-3" id="sec-ar">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-exclamation-octagon"></i> 应收逾期（{{ todo.ar_count }}）</span>
+    <span class="text-muted" style="font-size:12px;font-weight:400">应回款日 = 项目结束日期 + 账期</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>项目</th><th>客户</th><th>负责人</th><th>应回款日</th><th>逾期</th><th class="text-end">未收金额</th><th class="text-end">操作</th></tr>
+      </thead>
+      <tbody>
+        {% for p, due, days in todo.ar_rows %}
+          <tr>
+            <td><a class="company-link" href="{{ url_for('project.detail', pid=p.id) }}#payments">{{ p.project_name }}</a></td>
+            <td>{{ p.customer.company_name | shortname(20) }}</td>
+            <td>{{ p.owner or '—' }}</td>
+            <td class="mono">{{ due | dt('%Y-%m-%d') }}</td>
+            <td><span class="badge-soft red">{{ days }} 天</span></td>
+            <td class="text-end num c-red">¥ {{ p.unsettled_amount | money }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('project.detail', pid=p.id) }}#payments">去收款</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

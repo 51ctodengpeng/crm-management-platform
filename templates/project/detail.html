@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+{% block title %}{{ project.project_name }}{% endblock %}
+{% block page_title %}{{ project.project_name }}{% endblock %}
+{% block page_sub %}
+  <span class="badge-soft {{ project.status_color }}">{{ project.project_status }}</span>
+  <span class="badge-soft gray ms-1">{{ project.project_type or '未分类' }}</span>
+  <span class="ms-2">客户：<a href="{{ url_for('customer.detail', cid=project.customer_id) }}">{{ project.customer.company_name }}</a></span>
+  <span class="ms-2">合同金额 <span class="num">¥ {{ project.project_amount | money }}</span></span>
+  <span class="ms-2">含税价 <span class="num">¥ {{ project.tax_included_amount | money }}</span>（{{ project.tax_rate_label }}）</span>
+{% endblock %}
+
+{% block actions %}
+{% if can_edit_project(project) %}
+  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('project.edit_project', pid=project.id) }}"><i class="bi bi-pencil"></i> 编辑项目</a>
+{% endif %}
+<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('project.list_projects') }}">返回列表</a>
+{% endblock %}
+
+{% block content %}
+{% set my_edit = can_edit_project(project) %}
+{% set my_delete = can_delete_project(project) %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-card-text"></i> 项目信息</div>
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-item"><div class="label">项目类型</div><div class="value">{{ project.project_type or '-' }}</div></div>
+          <div class="info-item"><div class="label">合同金额（不含税）</div><div class="value num">¥ {{ project.project_amount | money }}</div></div>
+          <div class="info-item"><div class="label">含税价格</div>
+            <div class="value num">¥ {{ project.tax_included_amount | money }}
+              <span class="amount-net">（税点 {{ project.tax_rate_label }}，税额 ¥ {{ project.tax_amount | money }}）</span>
+            </div>
+          </div>
+          <div class="info-item"><div class="label">启动日期</div><div class="value mono">{{ project.start_date | dt('%Y-%m-%d') }}</div></div>
+          <div class="info-item"><div class="label">结束日期</div><div class="value mono">{{ project.end_date | dt('%Y-%m-%d') }}</div></div>
+          <div class="info-item"><div class="label">服务方式</div>
+            <div class="value"><span class="badge-soft {{ 'blue' if project.service_mode == '远程服务' else 'orange' }}">{{ project.service_mode or '远程服务' }}</span></div>
+          </div>
+          <div class="info-item"><div class="label">约定付款方式</div>
+            <div class="value"><span class="badge-soft {{ 'blue' if project.payment_method in TRANSFER_METHODS else 'green' }}">{{ project.payment_method or '支付软件转账' }}</span></div>
+          </div>
+          <div class="info-item"><div class="label">项目负责人</div>
+            <div class="value">{{ project.owner or '未分配' }}</div>
+          </div>
+          <div class="info-item"><div class="label">合同编号</div>
+            <div class="value mono">{{ project.contract_no or '—' }}</div>
+          </div>
+          <div class="info-item"><div class="label">签订日期</div>
+            <div class="value mono">{{ project.sign_date | dt('%Y-%m-%d') if project.sign_date else '—' }}</div>
+          </div>
+          <div class="info-item"><div class="label">账期</div>
+            <div class="value">{{ project.credit_days if project.credit_days is not none else 30 }} 天
+              <span class="amount-net">（用于应收逾期判定）</span>
+            </div>
+          </div>
+          <div class="info-item"><div class="label">附件情况</div>
+            <div class="value">{{ project.attachment_count }} 个附件 · 共 {{ project.attachment_total_human }}</div>
+          </div>
+          <div class="info-item"><div class="label">创建 / 最后修改</div>
+            <div class="value" style="font-size:12.5px">{{ project.created_at | dt }}<br>{{ project.updated_at | dt }}</div>
+          </div>
+        </div>
+        <hr>
+        <div class="label text-muted mb-1" style="font-size:11.5px">项目描述 / 服务内容 / 踩坑记录</div>
+        <div style="white-space:pre-wrap">{{ project.project_summary or '暂无描述' }}</div>
+        {% if project.payment_terms %}
+          <hr>
+          <div class="label text-muted mb-1" style="font-size:11.5px">付款条款</div>
+          <div style="white-space:pre-wrap">{{ project.payment_terms }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 附件区 ================= -->
+  <div class="col-lg-5">
+    <div class="card h-100" id="attachments">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-paperclip"></i> 附件（{{ project.attachment_count }}）</span>
+        {% if project.attachments %}
+          <a class="btn btn-sm btn-outline-primary"
+             href="{{ url_for('attachment.download_all', pid=project.id) }}"
+             title="把本项目全部附件打包成一个 zip 下载">
+            <i class="bi bi-box-arrow-down"></i> 打包下载
+          </a>
+        {% endif %}
+      </div>
+      <div class="card-body">
+
+        <!-- 上传区：拖拽 + 多选 + 已选文件预览（需「修改」权限） -->
+        {% if my_edit %}
+        <form method="post" action="{{ url_for('attachment.upload', pid=project.id) }}"
+              enctype="multipart/form-data" id="uploadForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="drop-zone" id="dropZone">
+            <i class="bi bi-cloud-arrow-up"></i>
+            <div class="dz-title">点击选择文件，或把文件拖到这里</div>
+            <div class="dz-sub">支持一次多选 · 单文件 ≤ 20MB</div>
+            <input type="file" name="files" id="fileInput" class="d-none" multiple
+                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.jpg,.jpeg,.png,.gif,.bmp,.webp">
+            <div class="dz-files" id="dzFiles"></div>
+          </div>
+          <div class="row g-2 mt-2">
+            <div class="col-6">
+              <select name="category" class="form-select form-select-sm">
+                {% for cat in ATTACH_CATEGORIES %}
+                  <option value="{{ cat }}" {% if loop.first %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <input type="text" name="remark" class="form-control form-control-sm"
+                     placeholder="备注，例：2026 年度维保合同">
+            </div>
+          </div>
+          <button class="btn btn-primary w-100 mt-2" type="submit" id="uploadBtn" disabled>
+            <i class="bi bi-upload"></i> 开始上传
+          </button>
+          <div class="form-text mt-2">
+            允许 pdf / doc / docx / xls / xlsx / ppt / pptx / 图片 / 压缩包，禁止 exe 等可执行文件；
+            同名文件再次上传会自动保存为新版本，旧版本保留可查。
+          </div>
+        </form>
+        {% else %}
+          <div class="perm-hint mb-2">
+            <i class="bi bi-lock"></i> 你对该项目只有查看权限，上传附件需联系管理员开通「修改」权限。
+          </div>
+        {% endif %}
+
+        {% if project.attachments %}
+          <div class="attach-summary mt-3">
+            <span><i class="bi bi-files"></i> 共 <span class="num">{{ project.attachment_count }}</span> 个文件</span>
+            <span>合计 <span class="num">{{ project.attachment_total_human }}</span></span>
+          </div>
+
+          <div class="attach-list">
+            {% for att in project.attachments if att.is_latest %}
+              <div class="attach-row">
+                <i class="bi {{ att.icon }} attach-icon"></i>
+                <div class="attach-main">
+                  {# 长文件名缩略显示，鼠标悬停可看完整名称 #}
+                  <span class="attach-name" title="{{ att.file_original_name }}">
+                    {{ att.file_original_name | shortname(30) }}
+                  </span>
+                  {% if (att.version or 1) > 1 %}
+                    <span class="attach-ver" title="同名文件已上传 {{ att.version }} 版">{{ att.version_label }}</span>
+                  {% endif %}
+                  <div class="attach-meta">
+                    <span class="badge-soft {{ att.category_color }}">{{ att.category or '其他' }}</span>
+                    {{ att.size_human }} · {{ att.upload_time | dt('%Y-%m-%d') }}
+                    {% if att.uploader %} · {{ att.uploader }}{% endif %}
+                    {% if att.remark %} · {{ att.remark }}{% endif %}
+                  </div>
+                  {% set olds = att.older_versions %}
+                  {% if olds %}
+                    <div class="attach-history">
+                      历史版本：
+                      {% for o in olds %}
+                        <a href="{{ url_for('attachment.preview', aid=o.id) }}" target="_blank"
+                           title="{{ o.file_original_name }} · {{ o.upload_time | dt }}">
+                          {{ o.version_label }}
+                        </a>{% if not loop.last %} · {% endif %}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="attach-actions">
+                  <a class="btn btn-sm btn-outline-secondary btn-icon"
+                     href="{{ url_for('attachment.preview', aid=att.id) }}" target="_blank" title="在线预览">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  {% if my_edit %}
+                  <button class="btn btn-sm btn-outline-secondary btn-icon" type="button"
+                          title="编辑备注" data-bs-toggle="modal" data-bs-target="#remarkModal"
+                          data-action="{{ url_for('attachment.update_remark', aid=att.id) }}"
+                          data-name="{{ att.file_original_name }}"
+                          data-remark="{{ att.remark or '' }}">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  {% endif %}
+                  <a class="btn btn-sm btn-primary btn-icon"
+                     href="{{ url_for('attachment.download', aid=att.id) }}" title="下载">
+                    <i class="bi bi-download"></i>
+                  </a>
+                  {% if my_delete %}
+                  <form method="post" action="{{ url_for('attachment.delete', aid=att.id) }}" class="d-inline"
+                        data-confirm="确认删除附件「{{ att.file_original_name }}」？磁盘文件将同步删除。">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-outline-danger btn-icon" type="submit" title="删除">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state py-4"><i class="bi bi-paperclip"></i>还没有附件，上传合同、发票或方案文档</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3" id="payments">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-cash-coin"></i> 收款与对账</span>
+    <span class="badge-soft {{ project.settle_color }}">{{ project.settle_label }}</span>
+  </div>
+  <div class="card-body">
+    <div class="money-tiles">
+      <div class="money-tile">
+        <span class="label">应收（含税）</span>
+        <span class="value num">¥ {{ project.receivable | money }}</span>
+      </div>
+      <div class="money-tile">
+        <span class="label">已对账</span>
+        <span class="value num c-green">¥ {{ project.matched_amount | money }}</span>
+      </div>
+      <div class="money-tile">
+        <span class="label">待对账</span>
+        <span class="value num c-orange">¥ {{ project.pending_amount | money }}</span>
+      </div>
+      <div class="money-tile">
+        <span class="label">差额</span>
+        <span class="value num {{ 'c-red' if project.unsettled_amount < 0 else '' }}">¥ {{ project.unsettled_amount | money }}</span>
+      </div>
+    </div>
+
+    <div class="plan-panel mt-3">
+      <div class="plan-head">
+        <span class="plan-title"><i class="bi bi-list-ol"></i> 回款计划</span>
+        <span class="text-muted" style="font-size:12px">
+          {% if project.payment_plans %}
+            计划合计 <strong class="num">¥ {{ project.plan_amount | money }}</strong>
+            {% if project.plan_gap > 0.005 %}
+              <span class="badge-soft red ms-1">超出应收 ¥ {{ project.plan_gap | money }}</span>
+            {% elif project.plan_gap < -0.005 %}
+              <span class="badge-soft orange ms-1">尚有 ¥ {{ (0 - project.plan_gap) | money }} 未排期</span>
+            {% else %}
+              <span class="badge-soft green ms-1">与应收一致</span>
+            {% endif %}
+          {% else %}
+            按合同约定拆成多期，登记收款时可关联期次
+          {% endif %}
+        </span>
+      </div>
+
+      {% if project.payment_plans %}
+        <div class="table-wrap">
+          <table class="table table-sm plan-table">
+            <thead>
+              <tr><th>期次</th><th>约定日期</th><th class="text-end">计划金额</th><th class="text-end">已收</th><th class="text-end">未收</th><th>状态</th><th>说明</th><th class="text-end">操作</th></tr>
+            </thead>
+            <tbody>
+              {% for pl in project.payment_plans %}
+                <tr>
+                  <td>第 {{ pl.seq }} 期{% if pl.ratio %}<span class="th-sub">{{ pl.ratio }}%</span>{% endif %}</td>
+                  <td class="mono">{{ pl.due_date | dt('%Y-%m-%d') }}</td>
+                  <td class="text-end num">¥ {{ pl.amount | money }}</td>
+                  <td class="text-end num c-green">¥ {{ pl.paid_amount | money }}</td>
+                  <td class="text-end num {{ 'c-red' if pl.remain_amount > 0 and pl.is_overdue else '' }}">¥ {{ pl.remain_amount | money }}</td>
+                  <td><span class="badge-soft {{ pl.status_color }}">{{ pl.status_label }}</span></td>
+                  <td class="text-muted" style="font-size:12px">{{ pl.note or '—' }}</td>
+                  <td class="text-end">
+                    {% if my_edit %}
+                      <form method="post" action="{{ url_for('finance.delete_plan', plan_id=pl.id) }}"
+                            data-confirm="确认删除第 {{ pl.seq }} 期回款计划？已有收款关联时会被阻止。">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-light" type="submit">删除</button>
+                      </form>
+                    {% else %}—{% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-muted small py-2">还没有分期计划。{% if my_edit %}可在下方按合同约定添加，例如「预付 30% / 验收 60% / 尾款 10%」。{% endif %}</div>
+      {% endif %}
+
+      {% if my_edit %}
+        <form method="post" action="{{ url_for('finance.add_plan', pid=project.id) }}" class="plan-add">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="date" name="due_date" class="form-control form-control-sm" required title="约定回款日期">
+          <input type="text" name="amount" class="form-control form-control-sm" inputmode="decimal"
+                 placeholder="计划金额（含税）" required>
+          <input type="text" name="note" class="form-control form-control-sm" maxlength="120"
+                 placeholder="说明，例：预付款 30%">
+          <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-plus-lg"></i> 加一期</button>
+        </form>
+      {% endif %}
+    </div>
+
+    {% if my_edit %}
+    <form method="post" action="{{ url_for('finance.add_payment', pid=project.id) }}" id="payForm" class="pay-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label">收款金额</label>
+          <input type="text" name="amount" class="form-control form-control-sm" inputmode="decimal"
+                 placeholder="0.00" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">付款方式</label>
+          <select name="pay_method" id="payMethod" class="form-select form-select-sm">
+            {% for m in PAYMENT_METHODS %}
+              <option value="{{ m }}" {% if project.payment_method == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2" data-transfer-only>
+          <label class="form-label">转账渠道</label>
+          <select name="pay_channel" class="form-select form-select-sm">
+            {% for c in PAY_CHANNELS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3" data-transfer-only>
+          <label class="form-label">交易流水号</label>
+          <input type="text" name="trade_no" class="form-control form-control-sm"
+                 maxlength="64" placeholder="转账必填，用于核对账单">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">到账日期</label>
+          <input type="date" name="paid_at" class="form-control form-control-sm"
+                 value="{{ now.strftime('%Y-%m-%d') }}">
+        </div>
+        <div class="col-md-1">
+          <button class="btn btn-sm btn-primary w-100" type="submit" title="登记收款">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">关联期次</label>
+          <select name="plan_id" class="form-select form-select-sm">
+            <option value="">不关联</option>
+            {% for pl in project.payment_plans %}
+              <option value="{{ pl.id }}">第 {{ pl.seq }} 期 · {{ pl.due_date | dt('%m-%d') }} · 未收 ¥{{ pl.remain_amount | money }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">付款方</label>
+          <input type="text" name="payer" class="form-control form-control-sm" maxlength="64"
+                 placeholder="默认取客户公司名">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">备注</label>
+          <input type="text" name="remark" class="form-control form-control-sm" maxlength="255"
+                 placeholder="例：首付款 30%">
+        </div>
+      </div>
+      <div class="form-text mt-2">
+        登记后进入「待对账」，核对流水无误点「对账」才计入已收；现金支付无流水号，可直接对账。
+      </div>
+    </form>
+    {% endif %}
+
+    {% if project.payments %}
+      <div class="table-wrap mt-3">
+        <table class="table table-sm pay-table">
+          <thead>
+            <tr>
+              <th>到账日期</th>
+              <th>期次</th>
+              <th class="text-end">金额</th>
+              <th>付款方式</th>
+              <th>流水号</th>
+              <th>付款方</th>
+              <th>状态</th>
+              <th class="text-end" style="width:180px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pay in project.payments %}
+              <tr>
+                <td class="mono">{{ pay.paid_at | dt('%Y-%m-%d') }}</td>
+                <td>{% if pay.plan %}<span class="badge-soft blue">第 {{ pay.plan.seq }} 期</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                <td class="text-end num">¥ {{ pay.amount | money }}</td>
+                <td><span class="badge-soft {{ pay.method_color }}">{{ pay.method_label }}</span></td>
+                <td class="mono" style="font-size:12px">{{ pay.trade_no or '—' }}</td>
+                <td>{{ pay.payer | shortname(14) }}</td>
+                <td>
+                  <span class="badge-soft {{ pay.status_color }}">{{ pay.status_label }}</span>
+                  {% if pay.status == 'matched' and pay.reconciled_by %}
+                    <div class="th-sub">{{ pay.reconciled_by }} · {{ pay.reconciled_at | dt('%m-%d %H:%M') }}</div>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  {% if pay.status == 'pending' and my_edit %}
+                    <form method="post" action="{{ url_for('finance.reconcile_one', pay_id=pay.id) }}"
+                          class="d-inline"
+                          data-confirm="确认对账 ¥{{ pay.amount | money }}（{{ pay.method_label }}）？对账后该笔金额计入已收。"
+                          data-confirm-danger="0" data-confirm-ok="确认对账">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="next" value="{{ url_for('project.detail', pid=project.id) }}#payments">
+                      <button class="btn btn-sm btn-outline-primary" type="submit">对账</button>
+                    </form>
+                  {% elif pay.status == 'matched' and my_delete %}
+                    <form method="post" action="{{ url_for('finance.unreconcile', pay_id=pay.id) }}"
+                          class="d-inline"
+                          data-confirm="撤销对账后，该笔 ¥{{ pay.amount | money }} 将不再计入已收，确认撤销？">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="next" value="{{ url_for('project.detail', pid=project.id) }}#payments">
+                      <button class="btn btn-sm btn-outline-secondary" type="submit">撤销</button>
+                    </form>
+                  {% endif %}
+                  {% if my_delete %}
+                    <form method="post" action="{{ url_for('finance.delete_payment', pay_id=pay.id) }}"
+                          class="d-inline"
+                          data-confirm="确认删除这笔 ¥{{ pay.amount | money }} 的收款记录？删除后不可恢复。">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="next" value="{{ url_for('project.detail', pid=project.id) }}#payments">
+                      <button class="btn btn-sm btn-outline-danger" type="submit">删除</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state py-4"><i class="bi bi-cash-stack"></i>还没有收款记录</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mt-1" id="followups">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-pencil-square"></i> 写跟进</div>
+      <div class="card-body">
+        {% set f_customer = project.customer %}
+        {% set f_project = project %}
+        {% set f_next = url_for('project.detail', pid=project.id) + '#followups' %}
+        {% if my_edit %}
+          {% include "partials/follow_form.html" %}
+        {% else %}
+          <div class="empty-state py-4"><i class="bi bi-lock"></i>没有该项目的修改权限，仅可查看跟进记录</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i> 项目跟进（{{ project.follow_ups | length }}）</span>
+        <span class="text-muted" style="font-size:11.5px;font-weight:400">客户维度的跟进会同步显示在客户详情</span>
+      </div>
+      <div class="card-body">
+        {% set f_rows = project.follow_ups %}
+        {% set f_can_write = my_edit %}
+        {% set f_next = url_for('project.detail', pid=project.id) + '#followups' %}
+        {% include "partials/follow_timeline.html" %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3" id="oplogs">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clock-history"></i> 本项目操作记录</span>
+    <a class="small" href="{{ url_for('logs', target_type='项目', target_id=project.id) }}">查看全部 →</a>
+  </div>
+  <div class="card-body">
+    {% if object_logs %}
+      <div class="obj-log-list">
+        {% for log in object_logs %}
+          <div class="obj-log">
+            <span class="badge-soft {{ log.action_color }}">{{ log.action }}</span>
+            <div class="obj-log-body">
+              <div class="obj-log-txt">{{ log.detail or '-' }}</div>
+              <div class="obj-log-meta">{{ log.username }} · {{ log.create_time | dt }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state py-3"><i class="bi bi-journal"></i>暂无与本项目相关的操作记录</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="text-muted small">
+      <i class="bi bi-recycle"></i>
+      删除项目会连同 {{ project.attachment_count }} 个附件一起移入回收站，可由管理员恢复。
+    </div>
+    {% if my_delete %}
+    <form method="post" action="{{ url_for('project.delete_project', pid=project.id) }}"
+          data-confirm="确认删除项目「{{ project.project_name }}」及其全部附件？此操作不可恢复！">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-outline-danger btn-sm" type="submit"><i class="bi bi-trash"></i> 删除该项目</button>
+    </form>
+    {% else %}
+    <span class="badge-soft gray"><i class="bi bi-lock"></i> 无删除权限</span>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- 附件备注编辑弹窗（复用同一个弹窗，动作与内容由触发按钮注入） -->
+<div class="modal fade" id="remarkModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" method="post" id="remarkForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-pencil text-primary"></i> 编辑附件备注</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2" id="remarkFileName"></p>
+        <label class="form-label">备注内容</label>
+        <input type="text" name="remark" id="remarkInput" class="form-control" maxlength="255"
+               placeholder="例：2026 年度维保合同 / 已盖章发票">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary btn-sm">保存备注</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function () {
+    // ---- 备注弹窗 ----
+    var modal = document.getElementById('remarkModal');
+    if (modal) {
+      modal.addEventListener('show.bs.modal', function (e) {
+        var d = e.relatedTarget.dataset;
+        document.getElementById('remarkForm').action = d.action;
+        document.getElementById('remarkFileName').textContent = '文件：' + d.name;
+        document.getElementById('remarkInput').value = d.remark || '';
+      });
+    }
+
+    // ---- 上传区：拖拽 + 多选 + 已选文件预览 ----
+    var zone = document.getElementById('dropZone');
+    var input = document.getElementById('fileInput');
+    var list = document.getElementById('dzFiles');
+    var btn = document.getElementById('uploadBtn');
+    var picked = [];                       // 用 DataTransfer 维护已选文件，保证"再次选择"是追加而不是替换
+
+    zone.addEventListener('click', function () { input.click(); });
+
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.remove('dragover'); });
+    });
+    zone.addEventListener('drop', function (e) {
+      if (e.dataTransfer && e.dataTransfer.files.length) { add(e.dataTransfer.files); }
+    });
+    input.addEventListener('change', function () { add(input.files); });
+
+    function add(files) {
+      for (var i = 0; i < files.length; i++) {
+        var same = picked.some(function (f) {
+          return f.name === files[i].name && f.size === files[i].size;
+        });
+        if (!same) { picked.push(files[i]); }
+      }
+      render();
+    }
+
+    function render() {
+      list.innerHTML = '';
+      picked.forEach(function (f, idx) {
+        var row = document.createElement('div');
+        // 长文件名同样缩略显示，避免撑破上传区
+        var label = f.name.length > 26 ? f.name.slice(0, 18) + '…' + f.name.slice(-6) : f.name;
+        row.title = f.name;
+        row.innerHTML = '<i class="bi bi-file-earmark"></i> ' + label +
+          ' <span class="text-muted">(' + (f.size / 1024).toFixed(1) + ' KB)</span>';
+        var del = document.createElement('a');
+        del.href = 'javascript:void(0)';
+        del.className = 'ms-2 text-danger';
+        del.textContent = '移除';
+        del.onclick = function () { picked.splice(idx, 1); render(); };
+        row.appendChild(del);
+        list.appendChild(row);
+      });
+      btn.disabled = picked.length === 0;
+      btn.innerHTML = picked.length
+        ? '<i class="bi bi-upload"></i> 开始上传（' + picked.length + ' 个文件）'
+        : '<i class="bi bi-upload"></i> 开始上传';
+
+      var dt = new DataTransfer();
+      picked.forEach(function (f) { dt.items.add(f); });
+      input.files = dt.files;
+    }
+  })();
+
+  // ---- 收款登记：转账才需要渠道与流水号，现金直接对账 ----
+  (function () {
+    var method = document.getElementById('payMethod');
+    if (!method) { return; }
+    var transferOnly = document.querySelectorAll('[data-transfer-only]');
+    function refresh() {
+      var transferMethods = {{ TRANSFER_METHODS | tojson }};
+      var on = transferMethods.indexOf(method.value) !== -1;
+      transferOnly.forEach(function (el) { el.classList.toggle('d-none', !on); });
+    }
+    method.addEventListener('change', refresh);
+    refresh();
+  })();
+</script>
+{% endblock %}

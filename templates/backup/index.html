@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}备份与恢复{% endblock %}
+{% block page_title %}备份与恢复{% endblock %}
+{% block page_sub %}
+  备份包包含数据库快照与全部附件，可整体迁移、也可回滚到任意一次备份
+{% endblock %}
+
+{% block actions %}
+<form method="post" action="{{ url_for('backup.create') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn-primary btn-sm" type="submit"
+          data-confirm="立即生成一份完整备份（数据库 + 附件）？文件会保存在服务器 backups 目录。"
+          data-confirm-title="生成备份" data-confirm-ok="开始备份">
+    <i class="bi bi-cloud-arrow-down"></i> 立即备份
+  </button>
+</form>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-database"></i> 当前数据</div>
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="label">数据库</div>
+            <div class="value" style="font-size:12px;word-break:break-all">{{ db_info.path }}</div>
+          </div>
+          <div class="info-item">
+            <div class="label">库大小</div>
+            <div class="value num">{{ db_info.size }}</div>
+          </div>
+          <div class="info-item">
+            <div class="label">最后写入</div>
+            <div class="value">{{ db_info.mtime | dt('%Y-%m-%d %H:%M') }}</div>
+          </div>
+          <div class="info-item">
+            <div class="label">附件文件</div>
+            <div class="value num">{{ upload_count }} 个</div>
+          </div>
+        </div>
+        <hr class="my-3">
+        <div class="text-muted" style="font-size:12px;line-height:1.8">
+          备份目录：<span class="num">{{ backup_dir }}</span><br>
+          备份对数据库做一致性快照（SQLite 走在线备份接口，MySQL 走 mysqldump 单事务导出），
+          写入过程中也不会拷到半截数据；附件以 UUID 命名单独存放，随包一起打包，恢复时原样还原。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-arrow-counterclockwise"></i> 从备份恢复</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('backup.restore') }}" enctype="multipart/form-data"
+              data-confirm="恢复会用备份中的数据覆盖当前数据库与附件！系统会先自动备份当前数据，但仍请确认操作时机。"
+              data-confirm-title="恢复数据" data-confirm-ok="确认恢复">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">选择服务器上的备份</label>
+              <select class="form-select" name="name">
+                <option value="">— 不选择 —</option>
+                {% for b in backups %}
+                  <option value="{{ b.name }}">
+                    {{ b.name }}{% if b.manifest.created_at %} · {{ b.manifest.created_at }}{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">或上传备份包（.zip）</label>
+              <input class="form-control" type="file" name="file" accept=".zip">
+            </div>
+            <div class="col-12">
+              <label class="form-label">输入 <span class="text-danger">RESTORE</span> 确认</label>
+              <input class="form-control" name="confirm" placeholder="RESTORE" autocomplete="off">
+              <div class="form-text">
+                恢复完成后会自动重跑一次结构升级，老备份也能直接还原到当前版本。
+              </div>
+            </div>
+            <div class="col-12">
+              <button class="btn btn-outline-danger" type="submit">
+                <i class="bi bi-life-preserver"></i> 开始恢复
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-archive"></i> 备份文件</span>
+    <span class="text-muted" style="font-size:11.5px">{{ backups | length }} 个</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-wrap">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>文件名</th>
+            <th>生成时间</th>
+            <th>数据量</th>
+            <th class="text-end">大小</th>
+            <th style="width:150px" class="text-end">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in backups %}
+            <tr>
+              <td>
+                <span class="mono">{{ b.name }}</span>
+                {% if b.broken %}<span class="badge-soft red">文件损坏</span>{% endif %}
+                {% if b.manifest.note %}
+                  <div class="cell-sub">{{ b.manifest.note }}</div>
+                {% endif %}
+              </td>
+              <td class="text-muted">{{ b.mtime | dt }}</td>
+              <td class="text-muted" style="font-size:12px">
+                {% if b.manifest.counts %}
+                  客户 {{ b.manifest.counts.customers }} · 项目 {{ b.manifest.counts.projects }} ·
+                  收款 {{ b.manifest.counts.payments }} · 附件 {{ b.manifest.counts.attachments }}
+                {% else %}-{% endif %}
+              </td>
+              <td class="text-end num">{{ human(b.size) }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="{{ url_for('backup.download', name=b.name) }}">
+                  <i class="bi bi-download"></i> 下载
+                </a>
+                <form method="post" action="{{ url_for('backup.delete', name=b.name) }}" class="d-inline"
+                      data-confirm="删除备份 {{ b.name }}？删除后无法找回。">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-4">
+              还没有备份，点击右上角「立即备份」生成第一份
+            </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

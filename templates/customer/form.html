@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% set is_edit = customer is not none %}
+{% block title %}{{ '编辑客户' if is_edit else '新增客户' }}{% endblock %}
+{% block page_title %}{{ '编辑客户' if is_edit else '新增客户' }}{% endblock %}
+{% block page_sub %}{{ customer.company_name if is_edit else '录入客户基础信息与来源渠道，保存后可继续为其创建项目' }}{% endblock %}
+
+{% block content %}
+{% set cur_channel = form.get('source_channel') or (customer.source_channel if is_edit else '') %}
+{% set is_custom = cur_channel and cur_channel not in SOURCE_CHANNELS %}
+{% set cur_custom = form.get('source_channel_custom') or (cur_channel if is_custom else '') %}
+
+<form method="post" id="customerForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  {% if duplicates %}
+    <div class="card mb-3" style="border-color:#f0c36d;background:#fffbf1">
+      <div class="card-body py-3">
+        <div class="fw-semibold mb-2" style="color:#8a5a00">
+          <i class="bi bi-exclamation-triangle"></i> 发现 {{ duplicates | length }} 个疑似重复的客户
+        </div>
+        <div class="table-wrap">
+          <table class="table table-sm mb-2">
+            <thead><tr><th>公司名称</th><th>对接人</th><th>联系电话</th><th>录入时间</th></tr></thead>
+            <tbody>
+              {% for d in duplicates %}
+                <tr>
+                  <td><a href="{{ url_for('customer.detail', cid=d.id) }}" target="_blank">{{ d.company_name }}</a></td>
+                  <td>{{ d.contact_name or '-' }}</td>
+                  <td>{{ d.contact_phone or '-' }}</td>
+                  <td class="text-muted">{{ d.created_at | dt('%Y-%m-%d') }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="small text-muted">
+          如果是同一家客户，请直接在已有客户下新增项目；确认是不同的客户，点右侧「仍然保存」。
+        </div>
+      </div>
+    </div>
+  {% endif %}
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <!-- 基本信息 -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-building"></i> 基本信息</div>
+        <div class="card-body row g-3">
+          <div class="col-md-8">
+            <label class="form-label required">公司名称</label>
+            <input type="text" name="company_name" class="form-control" required
+                   value="{{ form.get('company_name') or (customer.company_name if is_edit else '') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">客户等级</label>
+            <select name="customer_level" class="form-select">
+              {% set cur_level = form.get('customer_level') or (customer.customer_level if is_edit else (default_level or '普通')) %}
+              {% for l in CUSTOMER_LEVELS %}
+                <option value="{{ l }}" {% if cur_level == l %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">客户负责人</label>
+            {% set cur_owner = form.get('owner') or (customer.owner if is_edit else (current_user.display_name or current_user.username)) %}
+            <select name="owner" class="form-select">
+              <option value="">未分配</option>
+              {% for o in OWNERS %}
+                <option value="{{ o }}" {% if cur_owner == o %}selected{% endif %}>{{ o }}</option>
+              {% endfor %}
+              {% if cur_owner and cur_owner not in OWNERS %}
+                <option value="{{ cur_owner }}" selected>{{ cur_owner }}（已停用账号）</option>
+              {% endif %}
+            </select>
+            <div class="form-text">用于业绩统计与客户交接，可按负责人筛选</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">行业类型</label>
+            {% set cur_biz = form.get('business_type') or (customer.business_type if is_edit else '') %}
+            {% set biz_custom = cur_biz and cur_biz not in business_options %}
+            <select name="business_type" id="businessType" class="form-select"
+                    data-custom-target="businessTypeCustom" data-flag="{{ CUSTOM_CHANNEL_FLAG }}">
+              <option value="">请选择</option>
+              {% for b in business_options %}
+                <option value="{{ b }}" {% if cur_biz == b %}selected{% endif %}>{{ b }}</option>
+              {% endfor %}
+              <option value="{{ CUSTOM_CHANNEL_FLAG }}" {% if biz_custom %}selected{% endif %}>自定义…</option>
+            </select>
+            <input type="text" name="business_type_custom" id="businessTypeCustom"
+                   class="form-control mt-2 {% if not biz_custom %}d-none{% endif %}"
+                   maxlength="32" placeholder="填写具体行业，例：新能源"
+                   value="{{ cur_biz if biz_custom else '' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">来源渠道</label>
+            <select name="source_channel" id="sourceChannel" class="form-select"
+                    data-custom-target="sourceChannelCustom" data-flag="{{ CUSTOM_CHANNEL_FLAG }}">
+              <option value="">请选择来源</option>
+              {% for s in (channel_options or SOURCE_CHANNELS) %}
+                <option value="{{ s }}" {% if cur_channel == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+              <option value="{{ CUSTOM_CHANNEL_FLAG }}" {% if is_custom %}selected{% endif %}>自定义…</option>
+            </select>
+          </div>
+          <div class="col-md-4 {% if not is_custom %}d-none{% endif %}" id="customChannelWrap">
+            <label class="form-label">自定义渠道</label>
+            <input type="text" name="source_channel_custom" id="sourceChannelCustom" class="form-control"
+                   maxlength="32" placeholder="例：行业协会推荐"
+                   value="{{ cur_custom }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- 联系方式 -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-telephone"></i> 联系方式</div>
+        <div class="card-body row g-3">
+          <div class="col-md-4">
+            <label class="form-label">对接人姓名</label>
+            <input type="text" name="contact_name" class="form-control"
+                   value="{{ form.get('contact_name') or (customer.contact_name if is_edit else '') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">职位</label>
+            <input type="text" name="position" class="form-control" maxlength="32"
+                   placeholder="例：IT 经理 / 采购主管"
+                   value="{{ form.get('position') or (customer.position if is_edit else '') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">联系电话</label>
+            <input type="text" name="contact_phone" class="form-control"
+                   value="{{ form.get('contact_phone') or (customer.contact_phone if is_edit else '') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">微信号</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-wechat"></i></span>
+              <input type="text" name="wechat" class="form-control" placeholder="微信号 / 微信绑定手机号"
+                     value="{{ form.get('wechat') or (customer.wechat if is_edit else '') }}">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">邮箱</label>
+            <input type="email" name="contact_email" class="form-control"
+                   value="{{ form.get('contact_email') or (customer.contact_email if is_edit else '') }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- 地址信息 -->
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-geo-alt"></i> 地址信息</div>
+        <div class="card-body row g-3">
+          <div class="col-12">
+            <label class="form-label">所在地区</label>
+            {% set cur_region = form.get('region') or (customer.region if is_edit else '') %}
+            <div class="region-picker"
+                 data-url="{{ url_for('static', filename='data/regions.json') }}"
+                 data-value="{{ cur_region }}">
+              <div class="row g-2 rp-selects">
+                <div class="col-4"><select name="province" class="form-select rp-province"></select></div>
+                <div class="col-4"><select name="city" class="form-select rp-city"></select></div>
+                <div class="col-4"><select name="district" class="form-select rp-district"></select></div>
+              </div>
+              <input type="text" class="form-control rp-manual d-none" name="region" disabled
+                     maxlength="64" placeholder="例：江苏省苏州市吴中区" value="{{ cur_region }}">
+              <div class="d-flex justify-content-between align-items-center mt-1">
+                <a href="javascript:void(0)" class="small rp-toggle">手动填写地区</a>
+                <span class="rp-hint perm-hint"></span>
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">详细地址</label>
+            <input type="text" name="address" class="form-control"
+                   placeholder="街道、门牌号、园区楼栋"
+                   value="{{ form.get('address') or (customer.address if is_edit else '') }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">客户备注</label>
+            <textarea name="remark" class="form-control" rows="4"
+                      placeholder="沟通要点、决策链、报价习惯、服务要求等">{{ form.get('remark') or (customer.remark if is_edit else '') }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-check2-square"></i> 提交</div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">
+            带 <span class="text-danger">*</span> 为必填项。来源渠道支持下拉预设或自定义填写，
+            自定义渠道会参与列表筛选与统计。
+          </p>
+          <div class="d-grid gap-2">
+            <button class="btn btn-primary" type="submit">
+              <i class="bi bi-check2"></i> {{ '保存修改' if is_edit else '创建客户' }}
+            </button>
+            <a class="btn btn-light" href="{{ url_for('customer.detail', cid=customer.id) if is_edit else url_for('customer.list_customers') }}">取消</a>
+          </div>
+          {% if duplicates %}
+            <button class="btn btn-warning w-100 mt-2" type="submit" name="force" value="1">
+              <i class="bi bi-exclamation-triangle"></i> 确认不是重复，仍然保存
+            </button>
+          {% endif %}
+          {% if is_edit and customer.created_at %}
+            <hr>
+            <div class="text-muted small">
+              <div>录入：{{ customer.created_at | dt }}</div>
+              <div>修改：{{ customer.updated_at | dt }}</div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/region-picker.js') }}"></script>
+<script>
+  (function () {
+    var form = document.getElementById('customerForm');
+    var flag = '{{ CUSTOM_CHANNEL_FLAG }}';
+
+    // 通用「下拉预设 + 自定义输入」联动：行业类型、来源渠道共用同一套逻辑
+    function syncOne(select) {
+      var box = document.getElementById(select.dataset.customTarget);
+      if (!box) { return; }
+      var on = select.value === flag;
+      box.classList.toggle('d-none', !on);
+      // 自定义框所在列若单独成列，一并显隐
+      var col = box.closest('[id="customChannelWrap"]');
+      if (col) { col.classList.toggle('d-none', !on); }
+    }
+
+    document.querySelectorAll('select[data-custom-target]').forEach(function (select) {
+      select.addEventListener('change', function () {
+        syncOne(select);
+        if (select.value === flag) {
+          var box = document.getElementById(select.dataset.customTarget);
+          if (box) { box.focus(); }
+        }
+      });
+      syncOne(select);
+    });
+
+    // 提交前：选了"自定义"时用输入框的值替代下拉框，避免服务端收到哨兵值
+    form.addEventListener('submit', function () {
+      document.querySelectorAll('select[data-custom-target]').forEach(function (select) {
+        if (select.value !== flag) { return; }
+        var box = document.getElementById(select.dataset.customTarget);
+        box.value = box.value.trim() || '其他';
+        select.disabled = true;
+        box.name = select.name;
+      });
+    });
+  })();
+</script>
+{% endblock %}

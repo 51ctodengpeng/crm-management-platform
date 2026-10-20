@@ -44,3 +44,17 @@ temp/
 *.ldf
 *.sqlite
 *.db
+
+# ---- 本项目（Flask CRM）运行期数据，严禁入库 ----
+.secret_key
+crm.db
+crm.db.*
+uploads/*
+avatars/*
+backups/
+logs/
+tmp/
+.tmp_gui/
+.tmp_test/
+icon_preview.png
+*.spec.bak

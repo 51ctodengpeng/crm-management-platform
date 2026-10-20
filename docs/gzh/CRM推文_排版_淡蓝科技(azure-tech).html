@@ -1,0 +1,658 @@
+<section style="max-width:677px;margin:0 auto;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#33475B;line-height:1.85;letter-spacing:0.4px;overflow-x:hidden;">
+
+  <!-- 封面卡 -->
+  <section style="margin:0 0 26px;padding:32px 24px 24px;border-radius:14px;background:linear-gradient(135deg,#071A33 0%,#0D3D7E 58%,#1257B8 100%);">
+    <p style="margin:0 0 14px;">
+      <span style="display:inline-block;border:1px solid rgba(157,199,255,0.45);color:#9DC7FF;font-size:10.5px;font-weight:600;letter-spacing:2px;padding:3px 10px;border-radius:4px;"><span leaf="">PRODUCT NOTE</span></span>
+    </p>
+    <p style="margin:0 0 10px;font-size:22px;font-weight:800;color:#FFFFFF;line-height:1.45;letter-spacing:0.5px;">
+      <span leaf="">一个双击就能用的客户管理系统</span>
+    </p>
+    <p style="margin:0 0 20px;font-size:13px;color:#B7D3F5;line-height:1.8;">
+      <span leaf="">不装环境、不配数据库，给 3～30 人小团队的一份私有台账</span>
+    </p>
+    <section style="height:1px;background:linear-gradient(90deg,rgba(111,168,255,0.55),rgba(111,168,255,0));margin:0 0 14px;">
+      <span leaf=""><br></span>
+    </section>
+    <section style="display:flex;">
+      <section style="flex:1;margin-right:10px;">
+        <p style="margin:0 0 4px;font-size:17px;font-weight:800;color:#FFFFFF;font-family:'SF Mono',Consolas,Monaco,monospace;line-height:1.2;"><span leaf="">1 天</span></p>
+        <p style="margin:0;font-size:10.5px;color:#8FB6E4;letter-spacing:1px;"><span leaf="">从零到能用</span></p>
+      </section>
+      <section style="flex:1;margin-right:10px;border-left:1px solid rgba(143,182,228,0.25);padding-left:12px;">
+        <p style="margin:0 0 4px;font-size:17px;font-weight:800;color:#FFFFFF;font-family:'SF Mono',Consolas,Monaco,monospace;line-height:1.2;"><span leaf="">1 个</span></p>
+        <p style="margin:0;font-size:10.5px;color:#8FB6E4;letter-spacing:1px;"><span leaf="">免安装程序</span></p>
+      </section>
+      <section style="flex:1;border-left:1px solid rgba(143,182,228,0.25);padding-left:12px;">
+        <p style="margin:0 0 4px;font-size:17px;font-weight:800;color:#FFFFFF;font-family:'SF Mono',Consolas,Monaco,monospace;line-height:1.2;"><span leaf="">0 配置</span></p>
+        <p style="margin:0;font-size:10.5px;color:#8FB6E4;letter-spacing:1px;"><span leaf="">开箱即可用</span></p>
+      </section>
+    </section>
+  </section>
+
+  <!-- 引言卡 -->
+  <section style="margin:0 0 30px;padding:22px 22px 20px;background:#F2F7FF;border-left:3px solid #006EFF;border-radius:0 10px 10px 0;">
+    <p style="margin:0 0 12px;font-size:10px;color:#7C8DA6;letter-spacing:2.5px;font-weight:600;">
+      <span leaf="">QUOTE</span>
+    </p>
+    <p style="margin:0;font-size:17px;font-weight:700;color:#0E2038;line-height:1.75;letter-spacing:0.3px;">
+      <span leaf="">「工具该替你省时间，而不是先花一周去配置它。」</span>
+    </p>
+    <p style="margin:14px 0 0;text-align:right;font-size:12px;color:#7C8DA6;letter-spacing:0.5px;">
+      <span leaf="">—— Powershell 中文社区</span>
+    </p>
+  </section>
+
+  <!-- 在线体验 -->
+  <section style="margin:0 0 30px;padding:22px 22px 20px;border-radius:12px;background:linear-gradient(135deg,#006EFF 0%,#0B4EBA 100%);">
+    <p style="margin:0 0 12px;font-size:10px;color:#BBD6FF;letter-spacing:2.5px;font-weight:700;">
+      <span leaf="">LIVE DEMO</span>
+    </p>
+    <p style="margin:0 0 9px;font-size:16px;font-weight:800;color:#FFFFFF;line-height:1.55;letter-spacing:0.3px;">
+      <span leaf="">在线体验：打开就是登录页</span>
+    </p>
+    <p style="margin:0 0 11px;font-size:15px;font-weight:700;color:#FFFFFF;font-family:'SF Mono',Consolas,Monaco,monospace;line-height:1.6;word-break:break-all;">
+      <span leaf="">https://crm.powershell.com.cn/</span>
+    </p>
+    <p style="margin:0;font-size:12.5px;color:#C9DEFF;line-height:1.8;">
+      <span leaf="">演示账号 </span>
+      <span style="color:#FFFFFF;font-weight:700;"><span leaf="">admin / admin123</span></span>
+      <span leaf="">，随便点，别删数据就行。先看一圈，觉得对味再往下读。</span>
+    </p>
+  </section>
+
+  <!-- 前言 -->
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">上周有个做系统集成的朋友问我：有没有那种……不用折腾的客户管理工具？</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">他问这话的时候，桌面上开着</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">三个 Excel</span></span>
+    <span leaf="">：一个记客户，一个记项目进度，一个记回款；微信里躺着半年的报价单和聊天记录；手机备忘录里还有几条「下周三记得问验收」。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">这不是个别现象。这两年我们聊过十几家小团队，几乎都在同一个循环里打转——知道该管，但一想到要「上一套系统」，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">就一直在往后拖</span></span>
+    <span leaf="">。</span>
+  </p>
+
+  <!-- 本篇看点 -->
+  <section style="margin:0 0 34px;">
+    <p style="margin:0 0 12px;font-size:10.5px;color:#006EFF;letter-spacing:2px;font-weight:700;">
+      <span leaf="">本篇看点</span>
+    </p>
+    <section style="display:flex;justify-content:space-between;">
+      <section style="flex:1;margin-right:9px;padding:14px 12px;background:#F8FBFF;border:1px solid #E3EEFB;border-radius:9px;">
+        <p style="margin:0 0 7px;font-size:11px;color:#006EFF;font-weight:700;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">01</span></p>
+        <p style="margin:0;font-size:12.5px;font-weight:700;color:#0E2038;line-height:1.55;"><span leaf="">小团队到底卡在哪</span></p>
+      </section>
+      <section style="flex:1;margin-right:9px;padding:14px 12px;background:#F8FBFF;border:1px solid #E3EEFB;border-radius:9px;">
+        <p style="margin:0 0 7px;font-size:11px;color:#006EFF;font-weight:700;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">02</span></p>
+        <p style="margin:0;font-size:12.5px;font-weight:700;color:#0E2038;line-height:1.55;"><span leaf="">一天能做出什么</span></p>
+      </section>
+      <section style="flex:1;padding:14px 12px;background:#F8FBFF;border:1px solid #E3EEFB;border-radius:9px;">
+        <p style="margin:0 0 7px;font-size:11px;color:#006EFF;font-weight:700;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">03</span></p>
+        <p style="margin:0;font-size:12.5px;font-weight:700;color:#0E2038;line-height:1.55;"><span leaf="">为什么不用配环境</span></p>
+      </section>
+    </section>
+  </section>
+
+  <!-- 01 -->
+  <section style="margin:0 0 22px;padding:0 0 13px;border-bottom:1px solid #E3EEFB;">
+    <section style="display:flex;align-items:flex-end;">
+      <p style="margin:0 12px 0 0;font-size:26px;font-weight:800;color:#006EFF;line-height:1;font-family:'SF Mono',Consolas,Monaco,monospace;letter-spacing:-1px;">
+        <span leaf="">01</span>
+      </p>
+      <section style="flex:1;padding-bottom:1px;">
+        <p style="margin:0 0 3px;font-size:9.5px;color:#9AAEC4;letter-spacing:2.5px;font-weight:600;">
+          <span leaf="">TROUBLE</span>
+        </p>
+        <h3 style="margin:0;font-size:19px;font-weight:800;color:#0E2038;line-height:1.4;letter-spacing:0.3px;">
+          <span leaf="">先说说那些让人想放弃的日常</span>
+        </h3>
+      </section>
+    </section>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">第一个是版本。销售改一版，财务改一版，最后文件夹里躺着「客户清单-最终版-最终版2-真的最终版.xlsx」，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">谁也说不清哪一份才是对的</span></span>
+    <span leaf="">。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">第二个是人。客户资料在销售的笔记本和微信里，人一离职，交接只能靠回忆。</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">公司还在，客户关系断了</span></span>
+    <span leaf="">。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">第三个是钱的节奏。合同签了，回款分三期，第一期什么时候到期、哪笔到了、哪笔还差，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">全靠脑子记</span></span>
+    <span leaf="">。等想起来核对，账期已经过去两个月。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">第四个，是「上系统」本身的成本。买 SaaS，按人头收费，数据在别人服务器上，有的公司还要走采购审批；自己找人搭，得先装数据库、配运行环境、开端口、写部署文档——</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">一周过去，第一个客户还没录进去</span></span>
+    <span leaf="">。</span>
+  </p>
+
+  <section style="margin:0 0 26px;padding:20px 22px;border-radius:12px;background:linear-gradient(135deg,#0B2A55,#1257B8);">
+    <p style="margin:0;font-size:16px;font-weight:700;color:#FFFFFF;line-height:1.75;letter-spacing:0.4px;">
+      <span leaf="">「真正贵的从来不是软件本身，而是启动它的成本，和维护它的心力。」</span>
+    </p>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">所以我们的判断很简单：</span>
+    <strong style="color:#006EFF;"><span leaf="">如果一个工具需要你先学一周才能开始用，那它大概率会被放弃。</span></strong>
+  </p>
+
+  <!-- 分割线 -->
+  <section style="margin:36px 0;">
+    <section style="height:1px;background:linear-gradient(90deg,rgba(0,110,255,0.35),rgba(0,110,255,0.04));">
+      <span leaf=""><br></span>
+    </section>
+  </section>
+
+  <!-- 02 -->
+  <section style="margin:0 0 22px;padding:0 0 13px;border-bottom:1px solid #E3EEFB;">
+    <section style="display:flex;align-items:flex-end;">
+      <p style="margin:0 12px 0 0;font-size:26px;font-weight:800;color:#006EFF;line-height:1;font-family:'SF Mono',Consolas,Monaco,monospace;letter-spacing:-1px;">
+        <span leaf="">02</span>
+      </p>
+      <section style="flex:1;padding-bottom:1px;">
+        <p style="margin:0 0 3px;font-size:9.5px;color:#9AAEC4;letter-spacing:2.5px;font-weight:600;">
+          <span leaf="">BUILD</span>
+        </p>
+        <h3 style="margin:0;font-size:19px;font-weight:800;color:#0E2038;line-height:1.4;letter-spacing:0.3px;">
+          <span leaf="">一天时间，从「能做吗」到「已经在跑」</span>
+        </h3>
+      </section>
+    </section>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">我们是 Powershell 中文社区的一群运维和自动化爱好者，平时的工作就是把重复的事写成脚本。这段时间也一直在试各种 AI 编程工具，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">这次用的是 WorkBuddy</span></span>
+    <span leaf="">。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">CRM 是社区里被问得最多的需求，于是决定试一次：</span>
+    <strong style="color:#0E2038;"><span leaf="">不追求做大，只做一套我们自己愿意每天打开的台账。</span></strong>
+  </p>
+
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">那一天大概是这样过的。</span>
+  </p>
+
+  <section style="margin:0 0 18px;padding:14px 16px;background:#F8FBFF;border:1px solid #E3EEFB;border-radius:10px;">
+    <section style="display:flex;align-items:center;margin-bottom:8px;">
+      <span style="display:inline-block;background:#E8F1FE;color:#0B4EBA;font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:1px;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">上午</span></span>
+      <p style="margin:0 0 0 9px;font-size:14.5px;font-weight:800;color:#0E2038;"><span leaf="">只做减法</span></p>
+    </section>
+    <p style="margin:0;font-size:13.5px;color:#475C73;line-height:1.8;text-align:justify;">
+      <span leaf="">先列出三条主线——客户、项目、收款，其他一律往后放。附件、权限、操作日志被定为「必须有」，因为它们决定了这东西能不能长期用，而不是能不能演示。</span>
+    </p>
+  </section>
+
+  <section style="margin:0 0 18px;padding:14px 16px;background:#F8FBFF;border:1px solid #E3EEFB;border-radius:10px;">
+    <section style="display:flex;align-items:center;margin-bottom:8px;">
+      <span style="display:inline-block;background:#E8F1FE;color:#0B4EBA;font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:1px;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">下午</span></span>
+      <p style="margin:0 0 0 9px;font-size:14.5px;font-weight:800;color:#0E2038;"><span leaf="">边写边点，随手就改</span></p>
+    </section>
+    <p style="margin:0;font-size:13.5px;color:#475C73;line-height:1.8;text-align:justify;">
+      <span leaf="">一版一版地生成和修改。数据模型、页面、表单校验、列表筛选，改完立刻在浏览器里点一遍，哪里别扭当场改掉。</span>
+    </p>
+  </section>
+
+  <section style="margin:0 0 20px;padding:14px 16px;background:#F8FBFF;border:1px solid #E3EEFB;border-radius:10px;">
+    <section style="display:flex;align-items:center;margin-bottom:8px;">
+      <span style="display:inline-block;background:#E8F1FE;color:#0B4EBA;font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:1px;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">晚上</span></span>
+      <p style="margin:0 0 0 9px;font-size:14.5px;font-weight:800;color:#0E2038;"><span leaf="">补功能，然后跑测试</span></p>
+    </section>
+    <p style="margin:0;font-size:13.5px;color:#475C73;line-height:1.8;text-align:justify;">
+      <span leaf="">导入导出、待办提醒、经营看板先后补上，最后跑自动化测试。测试不是为了好看——这种「一个人维护」的系统，改一处很容易碰坏另一处，没有测试根本不敢改。</span>
+    </p>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">一天下来，系统能跑了。说实话，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">我们自己也有点意外</span></span>
+    <span leaf="">。</span>
+  </p>
+
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">几个数字都是真跑出来的，不是估的。</span>
+  </p>
+
+  <section style="display:flex;margin:0 0 20px;">
+    <section style="flex:1;margin-right:8px;padding:16px 12px 14px;background:#F8FBFF;border:1px solid #E3EEFB;border-top:2px solid #006EFF;border-radius:4px 4px 10px 10px;text-align:center;">
+      <p style="margin:0 0 5px;font-size:22px;font-weight:800;color:#006EFF;line-height:1.1;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">1 天</span></p>
+      <p style="margin:0;font-size:11px;color:#7C8DA6;letter-spacing:0.5px;"><span leaf="">从零到可交付</span></p>
+    </section>
+    <section style="flex:1;margin-right:8px;padding:16px 12px 14px;background:#F8FBFF;border:1px solid #E3EEFB;border-top:2px solid #006EFF;border-radius:4px 4px 10px 10px;text-align:center;">
+      <p style="margin:0 0 5px;font-size:22px;font-weight:800;color:#006EFF;line-height:1.1;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">14 张</span></p>
+      <p style="margin:0;font-size:11px;color:#7C8DA6;letter-spacing:0.5px;"><span leaf="">数据表覆盖</span></p>
+    </section>
+    <section style="flex:1;padding:16px 12px 14px;background:#F8FBFF;border:1px solid #E3EEFB;border-top:2px solid #006EFF;border-radius:4px 4px 10px 10px;text-align:center;">
+      <p style="margin:0 0 5px;font-size:22px;font-weight:800;color:#006EFF;line-height:1.1;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">283 项</span></p>
+      <p style="margin:0;font-size:11px;color:#7C8DA6;letter-spacing:0.5px;"><span leaf="">自动化测试</span></p>
+    </section>
+  </section>
+
+  <section style="margin:0 0 26px;padding:14px 18px;background:#F0FAF6;border-left:3px solid #0E9F6E;border-radius:0 8px 8px 0;">
+    <p style="margin:0;font-size:13.5px;color:#12654A;line-height:1.85;font-weight:600;">
+      <span leaf="">还有一条不在上面：整个系统 0 外网依赖，不连任何第三方服务，断网也能照常用。</span>
+    </p>
+  </section>
+
+  <p style="margin:26px 0 12px;padding-left:11px;border-left:3px solid #006EFF;font-size:15px;font-weight:800;color:#0E2038;line-height:1.5;">
+    <span leaf="">它不是演示，是真的能日常用</span>
+  </p>
+
+  <p style="margin:0 0 18px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">这里得把「完善」说清楚。它不是大厂的 ERP，但在</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">「客户台账」这件事</span></span>
+    <span leaf="">上，该有的环节基本都在。</span>
+  </p>
+
+  <section style="margin:0 0 12px;display:flex;align-items:flex-start;">
+    <span style="display:inline-block;width:6px;height:6px;background:#006EFF;border-radius:2px;margin:9px 9px 0 0;flex-shrink:0;"><span leaf=""><br></span></span>
+    <p style="margin:0;font-size:14.5px;color:#33475B;line-height:1.8;flex:1;">
+      <strong style="color:#0E2038;"><span leaf="">客户侧：</span></strong>
+      <span leaf="">档案、多个联系人、来源渠道、跟进记录时间轴、录入时自动查重。</span>
+    </p>
+  </section>
+
+  <section style="margin:0 0 12px;display:flex;align-items:flex-start;">
+    <span style="display:inline-block;width:6px;height:6px;background:#006EFF;border-radius:2px;margin:9px 9px 0 0;flex-shrink:0;"><span leaf=""><br></span></span>
+    <p style="margin:0;font-size:14.5px;color:#33475B;line-height:1.8;flex:1;">
+      <strong style="color:#0E2038;"><span leaf="">项目侧：</span></strong>
+      <span leaf="">合同编号、签订日期、付款条款、账期、含税与不含税自动换算、回款计划分期。</span>
+    </p>
+  </section>
+
+  <section style="margin:0 0 12px;display:flex;align-items:flex-start;">
+    <span style="display:inline-block;width:6px;height:6px;background:#006EFF;border-radius:2px;margin:9px 9px 0 0;flex-shrink:0;"><span leaf=""><br></span></span>
+    <p style="margin:0;font-size:14.5px;color:#33475B;line-height:1.8;flex:1;">
+      <strong style="color:#0E2038;"><span leaf="">收款侧：</span></strong>
+      <span leaf="">登记、核对流水、计入已收，逾期自动标红，流水可导出给财务。</span>
+    </p>
+  </section>
+
+  <section style="margin:0 0 12px;display:flex;align-items:flex-start;">
+    <span style="display:inline-block;width:6px;height:6px;background:#006EFF;border-radius:2px;margin:9px 9px 0 0;flex-shrink:0;"><span leaf=""><br></span></span>
+    <p style="margin:0;font-size:14.5px;color:#33475B;line-height:1.8;flex:1;">
+      <strong style="color:#0E2038;"><span leaf="">提醒侧：</span></strong>
+      <span leaf="">跟进到期、项目七天内到期、应收逾期、待对账笔数，进首页就能看到。</span>
+    </p>
+  </section>
+
+  <section style="margin:0 0 20px;display:flex;align-items:flex-start;">
+    <span style="display:inline-block;width:6px;height:6px;background:#006EFF;border-radius:2px;margin:9px 9px 0 0;flex-shrink:0;"><span leaf=""><br></span></span>
+    <p style="margin:0;font-size:14.5px;color:#33475B;line-height:1.8;flex:1;">
+      <strong style="color:#0E2038;"><span leaf="">管理侧：</span></strong>
+      <span leaf="">角色与数据范围、操作日志、回收站、一键备份、Excel 批量导入导出。</span>
+    </p>
+  </section>
+
+  <section style="margin:0 0 26px;padding:14px 18px;background:#F2F7FF;border-left:3px solid #006EFF;border-radius:0 8px 8px 0;">
+    <p style="margin:0 0 6px;">
+      <span style="display:inline-block;background:#006EFF;color:#FFFFFF;font-size:11px;font-weight:700;padding:2px 9px;border-radius:4px;letter-spacing:1px;"><span leaf="">说明</span></span>
+    </p>
+    <p style="margin:0;font-size:13.5px;color:#33475B;line-height:1.85;">
+      <span leaf="">功能多不是卖点。我们的标准是：常用操作两次点击内到达，超过就得改。</span>
+    </p>
+  </section>
+
+  <!-- 分割线 -->
+  <section style="margin:36px 0;">
+    <section style="height:1px;background:linear-gradient(90deg,rgba(0,110,255,0.35),rgba(0,110,255,0.04));">
+      <span leaf=""><br></span>
+    </section>
+  </section>
+
+  <!-- 03 -->
+  <section style="margin:0 0 22px;padding:0 0 13px;border-bottom:1px solid #E3EEFB;">
+    <section style="display:flex;align-items:flex-end;">
+      <p style="margin:0 12px 0 0;font-size:26px;font-weight:800;color:#006EFF;line-height:1;font-family:'SF Mono',Consolas,Monaco,monospace;letter-spacing:-1px;">
+        <span leaf="">03</span>
+      </p>
+      <section style="flex:1;padding-bottom:1px;">
+        <p style="margin:0 0 3px;font-size:9.5px;color:#9AAEC4;letter-spacing:2.5px;font-weight:600;">
+          <span leaf="">READY</span>
+        </p>
+        <h3 style="margin:0;font-size:19px;font-weight:800;color:#0E2038;line-height:1.4;letter-spacing:0.3px;">
+          <span leaf="">它是个程序，不是一套「要部署的系统」</span>
+        </h3>
+      </section>
+    </section>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">这是我们最想强调的一点。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">很多同类工具给你的是一份代码仓库和一份部署文档，然后说「很简单，装个 Python 就行」。对开发者确实简单，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">对使用者不是</span></span>
+    <span leaf="">。</span>
+  </p>
+
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">我们交付的是一个打包好的可执行程序，Windows 上双击就能开。</span>
+  </p>
+
+  <section style="margin:0 0 18px;padding:14px 16px;background:#F8FBFF;border:1px solid #E3EEFB;border-radius:10px;">
+    <section style="display:flex;align-items:center;margin-bottom:8px;">
+      <span style="display:inline-block;background:#E8F1FE;color:#0B4EBA;font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:1px;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">STEP 01</span></span>
+      <p style="margin:0 0 0 9px;font-size:14.5px;font-weight:800;color:#0E2038;"><span leaf="">解压到任意目录</span></p>
+    </section>
+    <p style="margin:0;font-size:13.5px;color:#475C73;line-height:1.8;text-align:justify;">
+      <span leaf="">别放 C 盘根目录或系统文件夹，普通文件夹就行，路径里最好没有特殊符号。</span>
+    </p>
+  </section>
+
+  <section style="margin:0 0 18px;padding:14px 16px;background:#F8FBFF;border:1px solid #E3EEFB;border-radius:10px;">
+    <section style="display:flex;align-items:center;margin-bottom:8px;">
+      <span style="display:inline-block;background:#E8F1FE;color:#0B4EBA;font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:1px;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">STEP 02</span></span>
+      <p style="margin:0 0 0 9px;font-size:14.5px;font-weight:800;color:#0E2038;"><span leaf="">双击那个 exe</span></p>
+    </section>
+    <p style="margin:0;font-size:13.5px;color:#475C73;line-height:1.8;text-align:justify;">
+      <span leaf="">窗口一闪，浏览器自动打开；如果没弹出来，手动访问本机的 8081 端口也一样。</span>
+    </p>
+  </section>
+
+  <section style="margin:0 0 20px;padding:14px 16px;background:#F8FBFF;border:1px solid #E3EEFB;border-radius:10px;">
+    <section style="display:flex;align-items:center;margin-bottom:8px;">
+      <span style="display:inline-block;background:#E8F1FE;color:#0B4EBA;font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:1px;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">STEP 03</span></span>
+      <p style="margin:0 0 0 9px;font-size:14.5px;font-weight:800;color:#0E2038;"><span leaf="">登录，改密码，开始录客户</span></p>
+    </section>
+    <p style="margin:0;font-size:13.5px;color:#475C73;line-height:1.8;text-align:justify;">
+      <span leaf="">首次运行会自动建库、建表、建默认管理员；登录后第一件事，记得把默认密码换掉。</span>
+    </p>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">没有 Python 环境，没有数据库安装，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">没有配置文件要改，没有端口要申请</span></span>
+    <span leaf="">。数据就存在程序旁边的一个文件里。</span>
+  </p>
+
+  <section style="margin:0 0 26px;padding:20px 22px;border-radius:12px;background:linear-gradient(135deg,#0B2A55,#1257B8);">
+    <p style="margin:0;font-size:16px;font-weight:700;color:#FFFFFF;line-height:1.75;letter-spacing:0.4px;">
+      <span leaf="">「换句话说：它是软件，不是项目。」</span>
+    </p>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">如果连解压都懒得做，还有一条更快的路：打开 </span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:700;color:#0B4EBA;word-break:break-all;"><span leaf="">https://crm.powershell.com.cn/</span></span>
+    <span leaf=""> 就是同一套系统的在线版——独立服务器、HTTPS 加密，功能和本地版一模一样，账号数据各自独立。想验证「这东西合不合我的用法」，点开看一眼比读十页说明快。</span>
+  </p>
+
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">第一次启动时，能看到的状态大概是这样。</span>
+  </p>
+
+  <section style="margin:0 0 26px;padding:14px 16px;border-radius:10px;background:#0B1B2E;">
+    <section style="display:flex;align-items:center;margin-bottom:10px;">
+      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ED3A0;margin-right:7px;"><span leaf=""><br></span></span>
+      <span style="font-size:10.5px;color:#6F8CAD;letter-spacing:1.5px;font-family:'SF Mono',Consolas,Monaco,monospace;"><span leaf="">SYSTEM STATUS</span></span>
+    </section>
+    <p style="margin:0 0 5px;font-size:12.5px;color:#CFE2F7;line-height:1.7;font-family:'SF Mono',Consolas,Monaco,monospace;">
+      <span leaf="">服务已就绪　→　127.0.0.1:8081</span>
+    </p>
+    <p style="margin:0 0 5px;font-size:12.5px;color:#8FB2D6;line-height:1.7;font-family:'SF Mono',Consolas,Monaco,monospace;">
+      <span leaf="">数据目录　　→　crm.db　·　uploads／</span>
+    </p>
+    <p style="margin:0;font-size:12.5px;color:#8FB2D6;line-height:1.7;font-family:'SF Mono',Consolas,Monaco,monospace;">
+      <span leaf="">外部依赖　　→　无</span>
+    </p>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">想换电脑，把这两样一起拷走就行。想备份，后台点一下「生成备份」，得到一个 zip，扔进网盘或移动硬盘。</span>
+  </p>
+
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">三种做法放一起对比，差别很清楚。</span>
+  </p>
+
+  <section style="margin:0 0 24px;">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <thead>
+        <tr>
+          <th style="background:#0E3A66;color:#FFFFFF;font-weight:700;padding:9px 8px;text-align:left;"><span leaf="">对比项</span></th>
+          <th style="background:#0E3A66;color:#FFFFFF;font-weight:700;padding:9px 8px;text-align:left;"><span leaf="">自己搭</span></th>
+          <th style="background:#0E3A66;color:#FFFFFF;font-weight:700;padding:9px 8px;text-align:left;"><span leaf="">买 SaaS</span></th>
+          <th style="background:#0E3A66;color:#FFFFFF;font-weight:700;padding:9px 8px;text-align:left;"><span leaf="">这个程序</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;font-weight:600;"><span leaf="">上线时间</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;"><span leaf="">几天到几周</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;"><span leaf="">一周起</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#0B4EBA;font-weight:700;"><span leaf="">十分钟</span></td>
+        </tr>
+        <tr>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;background:#F8FBFF;font-weight:600;"><span leaf="">每年成本</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;background:#F8FBFF;"><span leaf="">人力加服务器</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;background:#F8FBFF;"><span leaf="">按人头订阅</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#0B4EBA;background:#F8FBFF;font-weight:700;"><span leaf="">一次性</span></td>
+        </tr>
+        <tr>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;font-weight:600;"><span leaf="">数据在哪</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;"><span leaf="">自己服务器</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;"><span leaf="">厂商服务器</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#0B4EBA;font-weight:700;"><span leaf="">你的电脑</span></td>
+        </tr>
+        <tr>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;background:#F8FBFF;font-weight:600;"><span leaf="">谁来维护</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;background:#F8FBFF;"><span leaf="">得有人懂</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#33475B;background:#F8FBFF;"><span leaf="">厂商</span></td>
+          <td style="padding:9px 8px;border-bottom:1px solid #E3EEFB;color:#0B4EBA;background:#F8FBFF;font-weight:700;"><span leaf="">基本不用管</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section style="margin:0 0 26px;padding:14px 18px;background:#FEF7EC;border-left:3px solid #C2760A;border-radius:0 8px 8px 0;">
+    <p style="margin:0 0 6px;">
+      <span style="display:inline-block;background:#C2760A;color:#FFFFFF;font-size:11px;font-weight:700;padding:2px 9px;border-radius:4px;letter-spacing:1px;"><span leaf="">注意</span></span>
+    </p>
+    <p style="margin:0;font-size:13.5px;color:#6B4A12;line-height:1.85;">
+      <span leaf="">一个诚实的小提醒：程序没有数字签名，个别杀毒软件第一次会弹提示，加个信任即可；8081 端口被占用时它会自动顺延到下一个可用端口。</span>
+    </p>
+  </section>
+
+  <!-- 分割线 -->
+  <section style="margin:36px 0;">
+    <section style="height:1px;background:linear-gradient(90deg,rgba(0,110,255,0.35),rgba(0,110,255,0.04));">
+      <span leaf=""><br></span>
+    </section>
+  </section>
+
+  <!-- 04 -->
+  <section style="margin:0 0 22px;padding:0 0 13px;border-bottom:1px solid #E3EEFB;">
+    <section style="display:flex;align-items:flex-end;">
+      <p style="margin:0 12px 0 0;font-size:26px;font-weight:800;color:#006EFF;line-height:1;font-family:'SF Mono',Consolas,Monaco,monospace;letter-spacing:-1px;">
+        <span leaf="">04</span>
+      </p>
+      <section style="flex:1;padding-bottom:1px;">
+        <p style="margin:0 0 3px;font-size:9.5px;color:#9AAEC4;letter-spacing:2.5px;font-weight:600;">
+          <span leaf="">DETAILS</span>
+        </p>
+        <h3 style="margin:0;font-size:19px;font-weight:800;color:#0E2038;line-height:1.4;letter-spacing:0.3px;">
+          <span leaf="">几个用起来顺手的细节</span>
+        </h3>
+      </section>
+    </section>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <strong style="color:#0E2038;"><span leaf="">待办不用自己建。</span></strong>
+    <span leaf="">系统里没有「任务表」，待办是</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">从业务数据里实时算出来的</span></span>
+    <span leaf="">：哪个客户该跟进了、哪个项目七天内到期、哪笔应收过了账期、有几笔收款还没对账。打开首页就是一屏「今天该干什么」。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <strong style="color:#0E2038;"><span leaf="">删除不等于消失。</span></strong>
+    <span leaf="">删客户、删项目会先进回收站，项目、收款、期次、跟进、附件一起留着，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">发现删错了可以原样恢复</span></span>
+    <span leaf="">。真要清理，再彻底删。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <strong style="color:#0E2038;"><span leaf="">改坏了也不怕。</span></strong>
+    <span leaf="">关键操作都会写日志，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">谁在什么时候改了什么都有记录</span></span>
+    <span leaf="">；后台有一键备份，恢复之前还会自动再存一份。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <strong style="color:#0E2038;"><span leaf="">数据能进也能出。</span></strong>
+    <span leaf="">客户和项目都能用 Excel 批量导入，先预览，逐行告诉你哪行能进、哪行重复、哪行缺字段；导出的 Excel 会</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">跟着你当前的筛选条件走</span></span>
+    <span leaf="">。</span>
+  </p>
+
+  <!-- 分割线 -->
+  <section style="margin:36px 0;">
+    <section style="height:1px;background:linear-gradient(90deg,rgba(0,110,255,0.35),rgba(0,110,255,0.04));">
+      <span leaf=""><br></span>
+    </section>
+  </section>
+
+  <!-- 05 -->
+  <section style="margin:0 0 22px;padding:0 0 13px;border-bottom:1px solid #E3EEFB;">
+    <section style="display:flex;align-items:flex-end;">
+      <p style="margin:0 12px 0 0;font-size:26px;font-weight:800;color:#006EFF;line-height:1;font-family:'SF Mono',Consolas,Monaco,monospace;letter-spacing:-1px;">
+        <span leaf="">05</span>
+      </p>
+      <section style="flex:1;padding-bottom:1px;">
+        <p style="margin:0 0 3px;font-size:9.5px;color:#9AAEC4;letter-spacing:2.5px;font-weight:600;">
+          <span leaf="">HONEST</span>
+        </p>
+        <h3 style="margin:0;font-size:19px;font-weight:800;color:#0E2038;line-height:1.4;letter-spacing:0.3px;">
+          <span leaf="">也说清楚它不适合谁</span>
+        </h3>
+      </section>
+    </section>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">我们不想把它说成万能。它现在的边界很清楚。</span>
+  </p>
+
+  <section style="display:flex;margin:0 0 26px;">
+    <section style="flex:1;margin-right:8px;padding:13px 13px 15px;background:#F0FAF6;border-radius:10px;border-top:2px solid #0E9F6E;">
+      <p style="margin:0 0 7px;font-size:11px;font-weight:800;color:#0E6E4C;letter-spacing:1px;"><span leaf="">适合</span></p>
+      <p style="margin:0;font-size:12.5px;color:#2B6E58;line-height:1.8;"><span leaf="">3～30 人的小团队，尤其是系统集成、软件外包、设计咨询这类乙方公司；客户不多但每个都要长期跟；数据必须留在自己手里。</span></p>
+    </section>
+    <section style="flex:1;padding:13px 13px 15px;background:#FBF2F2;border-radius:10px;border-top:2px solid #C05252;">
+      <p style="margin:0 0 7px;font-size:11px;font-weight:800;color:#9E3F3F;letter-spacing:1px;"><span leaf="">不适合</span></p>
+      <p style="margin:0;font-size:12.5px;color:#7B4B4B;line-height:1.8;"><span leaf="">需要多级审批流、要做营销自动化、必须要手机 App 的团队，以及已经有一套成熟 ERP 且用得很顺的公司。</span></p>
+    </section>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">如果你属于后者，这套东西大概率帮不上忙，</span>
+    <span style="border-bottom:2px solid #9CC4FF;font-weight:600;color:#0E2038;"><span leaf="">别浪费时间</span></span>
+    <span leaf="">。</span>
+  </p>
+
+  <!-- 分割线 -->
+  <section style="margin:36px 0;">
+    <section style="height:1px;background:linear-gradient(90deg,rgba(0,110,255,0.35),rgba(0,110,255,0.04));">
+      <span leaf=""><br></span>
+    </section>
+  </section>
+
+  <!-- 结语 -->
+  <section style="margin:0 0 22px;padding:0 0 13px;border-bottom:1px solid #E3EEFB;">
+    <section style="display:flex;align-items:flex-end;">
+      <p style="margin:0 12px 0 0;font-size:26px;font-weight:800;color:#006EFF;line-height:1;font-family:'SF Mono',Consolas,Monaco,monospace;letter-spacing:-1px;">
+        <span leaf="">∞</span>
+      </p>
+      <section style="flex:1;padding-bottom:1px;">
+        <p style="margin:0 0 3px;font-size:9.5px;color:#9AAEC4;letter-spacing:2.5px;font-weight:600;">
+          <span leaf="">THE END</span>
+        </p>
+        <h3 style="margin:0;font-size:19px;font-weight:800;color:#0E2038;line-height:1.4;letter-spacing:0.3px;">
+          <span leaf="">先点开看一眼，再决定装不装</span>
+        </h3>
+      </section>
+    </section>
+  </section>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">我们做这个东西，本来是为了解决自己的问题。做完发现身边问的人不少，就想着先给社区里的朋友用起来。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">它不完美，但它是那种</span>
+    <span style="background:linear-gradient(180deg,transparent 62%,#D6E8FF 62%);font-weight:700;color:#0E2038;"><span leaf="">今天就能打开、今天就能录第一个客户</span></span>
+    <span leaf="">的「能用」。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">最省事的验证方式在这儿：</span>
+    <span style="background:linear-gradient(180deg,transparent 62%,#D6E8FF 62%);font-weight:700;color:#0B4EBA;word-break:break-all;"><span leaf="">https://crm.powershell.com.cn/</span></span>
+    <span leaf="">，浏览器打开，admin / admin123 登进去，随便点几下——客户列表、项目详情、收款对账、首页待办，五分钟就知道它合不合你的路子。</span>
+  </p>
+
+  <p style="margin:0 0 20px;font-size:15px;line-height:1.85;text-align:justify;color:#33475B;letter-spacing:0.4px;">
+    <span leaf="">想拿到能装在自己电脑上的版本，在公众号后台私信我，发「CRM」两个字就行。如果能顺便说一句你的情况——多少人、什么行业、现在用什么记客户——我会更有针对性地告诉你它合不合适。不合适，我也会直说。</span>
+  </p>
+
+  <section style="margin:0 0 28px;padding:26px 22px;border-radius:14px;background:linear-gradient(135deg,#EAF3FF,#F6FBFF);border:1px solid #D7E7FB;">
+    <p style="margin:0 0 10px;font-size:10px;color:#006EFF;letter-spacing:2px;font-weight:700;">
+      <span leaf="">TRY IT</span>
+    </p>
+    <p style="margin:0 0 12px;font-size:17px;font-weight:800;color:#0E2038;line-height:1.6;">
+      <span leaf="">先在线体验，再拿本地版</span>
+    </p>
+    <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#0B4EBA;font-family:'SF Mono',Consolas,Monaco,monospace;line-height:1.6;word-break:break-all;">
+      <span leaf="">https://crm.powershell.com.cn/</span>
+    </p>
+    <p style="margin:0 0 18px;font-size:13.5px;color:#475C73;line-height:1.85;">
+      <span leaf="">在线版现在就能点开用（登录页直接进，演示账号 admin / admin123）。想要装在自己电脑上、数据完全私有的打包程序，后台私信「CRM」，我把程序和使用说明一起发你。顺手说一句你的场景，我能提前告诉你哪些功能正好能用上、哪些还得等等。</span>
+    </p>
+    <p style="margin:0 0 12px;">
+      <span style="display:inline-block;background:#006EFF;color:#FFFFFF;font-size:13.5px;font-weight:700;padding:9px 22px;border-radius:8px;letter-spacing:1px;"><span leaf="">在公众号后台私信我</span></span>
+    </p>
+    <p style="margin:0;font-size:11.5px;color:#8FA3BC;line-height:1.7;">
+      <span leaf="">装不上、不会用、用着别扭，也欢迎直接说，我们改。</span>
+    </p>
+  </section>
+
+  <!-- END -->
+  <section style="text-align:center;margin:8px 0 30px;">
+    <section style="display:flex;align-items:center;justify-content:center;">
+      <span style="display:inline-block;height:1px;width:42px;background:#DCE8F8;margin-right:12px;"><span leaf=""><br></span></span>
+      <span style="font-size:10px;color:#9AAEC4;letter-spacing:4px;font-weight:600;"><span leaf="">END</span></span>
+      <span style="display:inline-block;height:1px;width:42px;background:#DCE8F8;margin-left:12px;"><span leaf=""><br></span></span>
+    </section>
+  </section>
+
+  <!-- 签名 -->
+  <section style="padding:20px 0 10px;border-top:1px solid #E9F1FB;">
+    <p style="margin:0 0 12px;font-size:14.5px;line-height:1.85;color:#33475B;text-align:justify;">
+      <span leaf="">我是 Powershell 中文社区的小编，这里主要聊 Windows 自动化、效率工具，和一些拿 AI 真的做出东西的过程。</span>
+    </p>
+    <p style="margin:0;font-size:14.5px;line-height:1.85;color:#33475B;text-align:justify;">
+      <span leaf="">如果你觉得今天这篇有收获，欢迎</span>
+      <strong style="color:#0E2038;"><span leaf="">点赞、在看、转发</span></strong>
+      <span leaf="">三连，我们下篇见。</span>
+    </p>
+  </section>
+
+</section>

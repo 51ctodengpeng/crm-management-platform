@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>重置密码 · {{ APP_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>(function(){try{var t=localStorage.getItem('crm-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-bs-theme',t);}}catch(e){}})();</script>
+
+</head>
+<body>
+<button class="theme-toggle theme-toggle--float" type="button" data-theme-toggle
+        aria-pressed="false" title="切换到夜间模式">
+  <i class="bi bi-moon-stars"></i><span data-theme-label>夜间</span>
+</button>
+
+<div class="auth-page">
+  <div class="auth-team-badge">
+    <div class="atb-icon"><i class="bi bi-terminal-fill"></i></div>
+    <div class="atb-text">
+      <div class="atb-title">PowerShell 中文社区团队</div>
+      <div class="atb-sub">开发并提供技术支持</div>
+    </div>
+    <a class="atb-mail" href="mailto:dengpeng@powershell.com.cn" title="技术支持邮箱">
+      <i class="bi bi-envelope-fill"></i>
+    </a>
+  </div>
+
+  <div class="auth-card">
+    <div class="auth-logo"><i class="bi bi-shield-lock-fill"></i></div>
+    <div class="auth-title">设置新密码</div>
+    <div class="auth-sub">正在为 {{ email }} 重置登录密码</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} py-2 small mb-2">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label">新密码</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-lock"></i></span>
+          <input type="password" name="new_password" class="form-control" placeholder="至少 8 位，字母+数字"
+                 required minlength="6" autofocus autocomplete="new-password">
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">确认新密码</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+          <input type="password" name="confirm_password" class="form-control" placeholder="再输入一次"
+                 required minlength="6" autocomplete="new-password">
+        </div>
+      </div>
+      <button class="btn btn-primary w-100 py-2" type="submit">
+        <i class="bi bi-check2"></i> 保存新密码
+      </button>
+    </form>
+
+    <div class="auth-foot">
+      <a href="{{ url_for('auth.login') }}"><i class="bi bi-arrow-left"></i> 返回登录</a>
+    </div>
+  </div>
+
+  <footer class="auth-footer">
+    <div class="af-row">
+      <span><i class="bi bi-terminal-fill"></i> 由 <strong>PowerShell 中文社区团队</strong> 开发并提供技术支持</span>
+      <span class="af-sep">|</span>
+      <a href="https://www.powershell.com.cn" target="_blank" rel="noopener noreferrer">www.powershell.com.cn</a>
+      <span class="af-sep">|</span>
+      <a href="mailto:dengpeng@powershell.com.cn">技术支持 dengpeng@powershell.com.cn</a>
+    </div>
+  </footer>
+</div>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

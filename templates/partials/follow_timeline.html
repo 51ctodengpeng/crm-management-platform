@@ -1,0 +1,38 @@
+{# 跟进时间轴：需要 f_customer / f_rows（该客户或项目的跟进列表）/ f_can_write / f_next #}
+{% if f_rows %}
+  <div class="timeline">
+    {% for f in f_rows %}
+      <div class="tl-item {% if loop.first %}is-latest{% endif %}">
+        <div class="tl-head">
+          <span class="tl-date">{{ f.followed_at | dt('%Y-%m-%d') }}</span>
+          <span class="badge-soft {{ f.method_color }}">{{ f.method }}</span>
+          <span class="tl-meta">{{ f.owner or f.created_by or '—' }} 记录</span>
+          {% if f.project %}
+            <a class="tl-meta" href="{{ url_for('project.detail', pid=f.project_id) }}#followups">
+              <i class="bi bi-kanban"></i> {{ f.project.project_name | shortname(18) }}
+            </a>
+          {% endif %}
+          {% if f_can_write %}
+            <form class="tl-del" method="post" action="{{ url_for('followup.delete', fid=f.id) }}"
+                  data-confirm="确认删除这条跟进记录？删除后客户最近跟进时间会自动重算。">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ f_next }}">
+              <button type="submit" title="删除跟进"><i class="bi bi-trash"></i></button>
+            </form>
+          {% endif %}
+        </div>
+        <div class="tl-content">{{ f.content }}</div>
+        {% if f.next_at %}
+          <div class="tl-next {% if f.next_at < now.date() %}is-over{% endif %}">
+            <i class="bi bi-arrow-right-circle"></i> {{ f.next_label }} · {{ f.next_at | dt('%Y-%m-%d') }}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state py-4">
+    <i class="bi bi-chat-square-text"></i>
+    还没有跟进记录。每次电话、微信或上门沟通后记一条，客户交接和复盘会轻松很多。
+  </div>
+{% endif %}

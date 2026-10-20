@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}客户管理{% endblock %}
+{% block page_title %}客户管理{% endblock %}
+{% block page_sub %}
+  共 {{ pagination.total }} 位客户{% if keyword %}（搜索：{{ keyword }}）{% endif %}
+  · 本页累计合同金额 <span class="num">¥ {{ page_amount | money }}</span>
+{% endblock %}
+
+{% block actions %}
+{% if can_create_data() %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('customer.new_customer') }}"><i class="bi bi-plus-lg"></i> 新增客户</a>
+{% endif %}
+<a class="btn btn-outline-success btn-sm"
+   href="{{ url_for('export.export_customers', q=keyword, level=level, business=business, channel=channel, owner=owner, sort=sort, order=order, created_from=created_from, created_to=created_to) }}"
+   data-confirm-template="#tplExportCustomers"><i class="bi bi-file-earmark-excel"></i> 导出当前筛选</a>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar row g-2 align-items-center" method="get" data-auto-filter>
+  <div class="col-md-2">
+    <input type="text" name="q" value="{{ keyword }}" class="form-control" data-autofocus
+           placeholder="公司 / 联系人 / 电话 / 微信">
+  </div>
+  <div class="col-md-2">
+    <select name="channel" class="form-select">
+      <option value="">全部来源渠道</option>
+      {% for ch in filter_channel_options %}
+        <option value="{{ ch }}" {% if channel == ch %}selected{% endif %}>{{ ch }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="business" class="form-select">
+      <option value="">全部行业</option>
+      {% for b in filter_business_options %}
+        <option value="{{ b }}" {% if business == b %}selected{% endif %}>{{ b }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="level" class="form-select">
+      <option value="">全部等级</option>
+      {% for l in filter_level_options %}
+        <option value="{{ l }}" {% if level == l %}selected{% endif %}>{{ l }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="owner" class="form-select">
+      <option value="">全部负责人</option>
+      {% for o in owner_filter_options %}
+        <option value="{{ o }}" {% if owner == o %}selected{% endif %}>{{ o }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="sort" class="form-select" title="排序字段">
+      {% for key, label in sort_options.items() %}
+        <option value="{{ key }}" {% if sort == key %}selected{% endif %}>按{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-1">
+    <select name="order" class="form-select" title="升序 / 降序">
+      <option value="desc" {% if order == 'desc' %}selected{% endif %}>降序</option>
+      <option value="asc" {% if order == 'asc' %}selected{% endif %}>升序</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <input type="date" name="created_from" value="{{ created_from }}" class="form-control"
+           title="录入起始日期">
+  </div>
+  <div class="col-md-2">
+    <input type="date" name="created_to" value="{{ created_to }}" class="form-control"
+           title="录入截止日期">
+  </div>
+  <div class="col-md-3 d-flex gap-2 align-items-center">
+    <select name="per_page" class="form-select" style="max-width:96px">
+      {% for n in [10, 20, 50, 100] %}
+        <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }} 条/页</option>
+      {% endfor %}
+    </select>
+    <a class="btn btn-light" href="{{ url_for('customer.list_customers') }}">重置</a>
+    <span class="perm-hint d-none d-xl-inline">条件即时生效</span>
+  </div>
+</form>
+
+<form method="post" action="{{ url_for('customer.batch') }}" id="bulkForm"
+      data-value-selects="bulkLevel,bulkBusiness"
+      data-delete-tip="确认删除选中的 {n} 个客户？将连带删除其名下项目与附件，且不可恢复！">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="bulk-bar" id="bulkBar">
+    <span class="bulk-count">已选 <strong id="bulkCount">0</strong> 项</span>
+    <select class="form-select form-select-sm" id="bulkAction" name="action">
+      <option value="">批量操作…</option>
+      <option value="level">修改客户等级</option>
+      <option value="business">修改行业类型</option>
+      <option value="delete">批量删除</option>
+    </select>
+    <select class="form-select form-select-sm d-none" id="bulkLevel" data-for-actions="level" disabled>
+      {% for l in level_options %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
+    </select>
+    <select class="form-select form-select-sm d-none" id="bulkBusiness" data-for-actions="business" disabled>
+      {% for b in business_options %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-sm btn-primary" type="submit">执行</button>
+    <button class="btn btn-sm btn-light" type="button" id="bulkClear">取消选择</button>
+    <span class="perm-hint">删除客户需「全部数据」范围，无权限的记录会被跳过</span>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="check-col"><input type="checkbox" class="check-all" id="checkAll" title="全选本页"></th>
+          <th style="width:46px">#</th>
+          <th>公司名称</th>
+          <th>对接人</th>
+          <th>电话 / 微信</th>
+          <th>来源渠道</th>
+          <th>负责人</th>
+          <th>所在地区</th>
+          <th>等级</th>
+          <th style="width:118px">跟进</th>
+          <th class="text-center">项目</th>
+          <th class="text-end">累计金额</th>
+          <th style="width:186px" class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in pagination.items %}
+          <tr>
+            <td class="check-col"><input type="checkbox" class="row-check" value="{{ c.id }}"></td>
+            <td><span class="row-idx">{{ c.id }}</span></td>
+            <td>
+              <a class="company-link" href="{{ url_for('customer.detail', cid=c.id) }}">{{ c.company_name }}</a>
+              <div class="cell-sub">
+                {{ c.business_type or '未分类' }}
+                {% if c.address %} · {{ c.address | shortname(22) }}{% endif %}
+              </div>
+            </td>
+            <td>{{ c.contact_name or '-' }}</td>
+            <td>
+              {% if c.contact_phone %}<div>{{ c.contact_phone }}</div>{% endif %}
+              {% if c.wechat %}<div class="cell-sub"><i class="bi bi-wechat"></i> {{ c.wechat }}</div>{% endif %}
+              {% if not c.contact_phone and not c.wechat %}-{% endif %}
+            </td>
+            <td>
+              {% if c.source_channel %}
+                <span class="badge-soft cyan">{{ c.source_channel }}</span>
+              {% else %}
+                <span class="text-muted">未填写</span>
+              {% endif %}
+            </td>
+            <td>{{ c.owner or '—' }}</td>
+            <td>{{ c.region or '-' }}</td>
+            <td>
+              <span class="badge-soft {{ level_color(c.customer_level) }}">{{ c.customer_level or '普通' }}</span>
+            </td>
+            <td>
+              {% if c.last_follow_at %}
+                <div style="font-size:12px">最近 {{ c.last_follow_at | dt('%m-%d') }}
+                  <span class="th-sub">{{ c.days_since_follow }} 天前</span>
+                </div>
+              {% else %}
+                <span class="text-muted" style="font-size:12px">未跟进</span>
+              {% endif %}
+              {% if c.next_follow_at %}
+                <span class="badge-soft {{ 'red' if c.follow_state.startswith('逾期') else ('orange' if c.follow_state == '今日跟进' else 'blue') }}">
+                  {{ c.follow_state }}
+                </span>
+              {% endif %}
+            </td>
+            <td class="text-center">{{ c.project_count }}</td>
+            <td class="text-end num">¥ {{ c.total_amount | money }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('customer.detail', cid=c.id) }}">详情</a>
+              {% if can_edit_customer(c) %}
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('customer.edit_customer', cid=c.id) }}">编辑</a>
+              {% endif %}
+              {% if can_delete_customer(c) %}
+                <form method="post" action="{{ url_for('customer.delete_customer', cid=c.id) }}" class="d-inline"
+                      data-confirm="确认删除客户「{{ c.company_name }}」？ 将同时删除其名下 {{ c.project_count }} 个项目和全部附件，且不可恢复！">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">删除</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="13" class="empty-state">
+              <i class="bi bi-people"></i>
+              {% if keyword or level or business or channel %}没有符合条件的客户，试试调整筛选条件{% else %}还没有客户，点击右上角「新增客户」开始录入{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pagination.pages > 1 %}
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <div class="text-muted small">第 {{ pagination.page }} / {{ pagination.pages }} 页 · 共 {{ pagination.total }} 条</div>
+      <nav>
+        <ul class="pagination pagination-sm">
+          <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('customer.list_customers', page=pagination.prev_num, q=keyword, level=level, business=business, channel=channel, per_page=per_page) }}">上一页</a>
+          </li>
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+              <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('customer.list_customers', page=p, q=keyword, level=level, business=business, channel=channel, per_page=per_page) }}">{{ p }}</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+          <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('customer.list_customers', page=pagination.next_num, q=keyword, level=level, business=business, channel=channel, per_page=per_page) }}">下一页</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/bulk.js') }}"></script>
+{% endblock %}

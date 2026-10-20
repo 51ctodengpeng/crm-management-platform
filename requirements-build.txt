@@ -1,0 +1,4 @@
+# 打包成 Windows EXE 所需的额外依赖
+# 用法： .venv/Scripts/python.exe -m pip install -r requirements-build.txt
+-r requirements.txt
+pyinstaller>=6.6

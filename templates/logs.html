@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}操作日志{% endblock %}
+{% block page_title %}操作日志{% endblock %}
+{% block page_sub %}
+  记录新增、修改、删除、上传、下载、审批等关键操作，共 {{ pagination.total }} 条
+  {% if target_type %} · 对象类型：{{ target_type }}{% endif %}
+  {% if target_id %} · 对象 ID：{{ target_id }}{% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar row g-2 align-items-center" method="get" data-auto-filter>
+  <div class="col-lg-4 col-md-6">
+    <input type="text" name="q" value="{{ keyword }}" class="form-control" data-autofocus
+           placeholder="搜索操作人 / 详情 / 对象类型">
+  </div>
+  <div class="col-lg-2 col-md-3">
+    <select name="action" class="form-select">
+      <option value="">全部动作</option>
+      {% for a in actions %}
+        <option value="{{ a }}" {% if action == a %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-lg-2 col-md-3">
+    <select name="target_type" class="form-select" title="按对象类型筛选">
+      <option value="">全部对象</option>
+      {% for t in target_types %}
+        <option value="{{ t }}" {% if target_type == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-lg-2 col-md-3">
+    <select name="client" class="form-select" title="按客户端类型筛选">
+      <option value="">全部客户端</option>
+      {% for k in client_kinds %}
+        <option value="{{ k }}" {% if client == k %}selected{% endif %}>{{ k }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if current_user.is_admin %}
+    <div class="col-lg-2 col-md-3">
+      <select name="operator" class="form-select" title="按操作人筛选">
+        <option value="">全部操作人</option>
+        {% for u in operators %}
+          <option value="{{ u }}" {% if operator == u %}selected{% endif %}>{{ u }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  {% endif %}
+  <div class="col-lg-3 col-md-4">
+    <input type="date" name="date_from" value="{{ date_from }}" class="form-control" title="起始日期">
+  </div>
+  <div class="col-lg-3 col-md-4">
+    <input type="date" name="date_to" value="{{ date_to }}" class="form-control" title="截止日期（含当天）">
+  </div>
+  <div class="col-lg-2 col-md-3 d-flex gap-2 align-items-center">
+    <a class="btn btn-light" href="{{ url_for('logs') }}">重置</a>
+    {% if target_id %}
+      <input type="hidden" name="target_id" value="{{ target_id }}">
+      <span class="badge-soft blue">对象 #{{ target_id }}</span>
+    {% endif %}
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:158px">时间</th>
+          <th style="width:96px">操作人</th>
+          <th style="width:76px">动作</th>
+          <th style="width:76px">对象</th>
+          <th>详情</th>
+          <th style="width:126px" title="来源：客户主档的省 + 市（如「广东省深圳市」）；不涉及客户或未填写显示 —">客户省市</th>
+          <th style="width:146px" title="来源：请求的 User-Agent 归一化结果">客户端</th>
+          <th style="width:110px">IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in pagination.items %}
+          <tr>
+            <td class="text-muted mono" style="font-size:12.5px">{{ log.create_time | dt('%Y-%m-%d %H:%M:%S') }}</td>
+            <td>{{ log.username }}</td>
+            <td><span class="badge-soft {{ log.action_color }}">{{ log.action }}</span></td>
+            <td>{{ log.target_type }}</td>
+            <td>{{ log.detail }}</td>
+            {% set region = log_regions.get(log.id) %}
+            <td style="font-size:12.5px" title="{{ region or '无客户归属地：对象已删除、不涉及客户，或客户未填写省 / 市' }}">
+              {% if region %}{{ region }}{% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td>
+              {% if log.client_kind %}
+                <span class="badge-soft {{ log.client_color }}">{{ log.client_kind }}</span>
+                {% if log.client_detail %}
+                  <div class="text-muted" style="font-size:11.5px;margin-top:3px">{{ log.client_detail }}</div>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-muted mono" style="font-size:12px">{{ log.ip or '—' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="empty-state"><i class="bi bi-clock-history"></i>暂无日志记录</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pagination.pages > 1 %}
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <div class="text-muted small">第 {{ pagination.page }} / {{ pagination.pages }} 页 · 共 {{ pagination.total }} 条</div>
+      <nav>
+        <ul class="pagination pagination-sm">
+          <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('logs', page=pagination.prev_num, **filter_args) }}">上一页</a>
+          </li>
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+              <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('logs', page=p, **filter_args) }}">{{ p }}</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+          <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('logs', page=pagination.next_num, **filter_args) }}">下一页</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

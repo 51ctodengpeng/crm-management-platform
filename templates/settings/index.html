@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% block title %}系统设置{% endblock %}
+{% block page_title %}系统设置{% endblock %}
+{% block page_sub %}集中管理站点信息、邮件服务与功能开关，保存后立即生效{% endblock %}
+
+{% block actions %}
+<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('user.list_users') }}">
+  <i class="bi bi-person-badge"></i> 账号管理
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="settings-nav">
+  <a href="#basic"><i class="bi bi-sliders"></i> 基础信息</a>
+  <a href="#mail"><i class="bi bi-hdd-network"></i> 邮件服务</a>
+  <a href="#features"><i class="bi bi-toggles"></i> 邮件功能</a>
+</div>
+
+{% if errors %}
+  <div class="alert alert-danger py-2 small">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    {% for field, msg in errors.items() %}<div>{{ msg }}</div>{% endfor %}
+  </div>
+{% endif %}
+
+<!-- ==================== 1. 基础信息 ==================== -->
+<div class="card mb-3" id="basic">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-sliders"></i> 基础信息</span>
+    <span class="perm-hint">影响全站显示与默认行为</span>
+  </div>
+  <form id="formBasic" method="post" action="{{ url_for('settings.save_basic') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card-body row g-3">
+      <div class="col-md-4">
+        <label class="form-label required">站点名称</label>
+        <input type="text" name="site_name"
+               class="form-control {% if errors.get('site_name') %}is-invalid{% endif %}"
+               maxlength="{{ site_name_range[1] }}"
+               value="{{ cfg.site_name }}">
+        {% if errors.get('site_name') %}
+          <div class="invalid-feedback">{{ errors.site_name }}</div>
+        {% else %}
+          <div class="form-text">{{ site_name_range[0] }}~{{ site_name_range[1] }} 个字符，显示在标题栏、侧边栏与登录页</div>
+        {% endif %}
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">站点副标题</label>
+        <input type="text" name="site_subtitle"
+               class="form-control {% if errors.get('site_subtitle') %}is-invalid{% endif %}"
+               maxlength="60" value="{{ cfg.site_subtitle }}">
+        {% if errors.get('site_subtitle') %}
+          <div class="invalid-feedback">{{ errors.site_subtitle }}</div>
+        {% else %}
+          <div class="form-text">登录页与侧边栏的一句话说明，留空则不显示</div>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">默认每页条数</label>
+        <select name="default_per_page"
+                class="form-select {% if errors.get('default_per_page') %}is-invalid{% endif %}">
+          {% for n in per_page_options %}
+            <option value="{{ n }}" {% if cfg.default_per_page == n %}selected{% endif %}>{{ n }} 条/页</option>
+          {% endfor %}
+        </select>
+        {% if errors.get('default_per_page') %}
+          <div class="invalid-feedback">{{ errors.default_per_page }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-9">
+        <label class="form-label">首页公告</label>
+        <input type="text" name="dashboard_notice" class="form-control" maxlength="500"
+               placeholder="留空则不在首页显示公告，例：本周六 22:00-24:00 系统维护"
+               value="{{ cfg.dashboard_notice }}">
+        <div class="form-text">显示在经营概览顶部，用于临时通知与维护提醒</div>
+      </div>
+      <div class="col-md-3 d-flex align-items-center">
+        <div class="form-check form-switch mt-3">
+          <input class="form-check-input" type="checkbox" name="allow_register" value="1"
+                 id="swRegisterOpen" {% if cfg.allow_register %}checked{% endif %}>
+          <label class="form-check-label" for="swRegisterOpen">
+            <strong>开放注册</strong>
+            <div class="th-sub">关闭后注册页提示联系管理员</div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </form>
+  <div class="card-foot">
+      <button class="btn btn-primary btn-sm" type="submit" form="formBasic">
+        <i class="bi bi-check2"></i> 保存基础设置
+      </button>
+      <form method="post" action="{{ url_for('settings.reset_group', group='basic') }}"
+            data-confirm="将基础信息恢复为系统默认值（站点名称、每页条数、公告等），确认继续？"
+            data-confirm-danger="0" data-confirm-ok="恢复默认">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-light btn-sm" type="submit">
+          <i class="bi bi-arrow-counterclockwise"></i> 恢复默认
+        </button>
+      </form>
+    </div>
+</div>
+
+<!-- ==================== 2. 邮件服务 ==================== -->
+<div class="card mb-3" id="mail">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-hdd-network"></i> 邮件服务（SMTP）</span>
+    {% if cfg.smtp_enabled and cfg.smtp_host and cfg.smtp_user %}
+      <span class="badge-soft green"><i class="bi bi-check2-circle"></i> 已启用</span>
+    {% else %}
+      <span class="badge-soft gray">未启用</span>
+    {% endif %}
+  </div>
+  <form id="formMail" method="post" action="{{ url_for('settings.save_mail') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card-body row g-3">
+      <div class="col-md-4">
+        <label class="form-label">SMTP 服务器</label>
+        <input type="text" name="smtp_host"
+               class="form-control {% if errors.get('smtp_host') %}is-invalid{% endif %}"
+               placeholder="smtp.qq.com" value="{{ cfg.smtp_host }}">
+        {% if errors.get('smtp_host') %}
+          <div class="invalid-feedback">{{ errors.smtp_host }}</div>
+        {% else %}
+          <div class="form-text">只填域名或 IP，例如 smtp.qq.com / smtp.163.com</div>
+        {% endif %}
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">端口</label>
+        <input type="number" name="smtp_port"
+               class="form-control {% if errors.get('smtp_port') %}is-invalid{% endif %}"
+               min="1" max="65535" value="{{ cfg.smtp_port }}">
+        {% if errors.get('smtp_port') %}<div class="invalid-feedback">{{ errors.smtp_port }}</div>{% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">加密方式</label>
+        <select name="smtp_security" class="form-select">
+          {% for key, label in security_options.items() %}
+            <option value="{{ key }}" {% if cfg.smtp_security == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <div class="form-text">465 用 SSL/TLS，587 用 STARTTLS</div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">发信人名称</label>
+        <input type="text" name="smtp_sender_name" class="form-control" maxlength="32"
+               value="{{ cfg.smtp_sender_name }}">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">发件邮箱（账号）</label>
+        <input type="text" name="smtp_user"
+               class="form-control {% if errors.get('smtp_user') %}is-invalid{% endif %}"
+               placeholder="notice@example.com" value="{{ cfg.smtp_user }}">
+        {% if errors.get('smtp_user') %}
+          <div class="invalid-feedback">{{ errors.smtp_user }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">SMTP 密码 / 授权码</label>
+        <input type="password" name="smtp_password" autocomplete="new-password"
+               class="form-control {% if errors.get('smtp_password') %}is-invalid{% endif %}"
+               placeholder="{{ '已保存，留空表示不修改' if cfg.has_password else '请输入邮箱授权码' }}">
+        {% if errors.get('smtp_password') %}
+          <div class="invalid-feedback">{{ errors.smtp_password }}</div>
+        {% else %}
+          <div class="form-text">
+            {% if cfg.has_password %}
+              <i class="bi bi-shield-lock"></i> 已加密保存，留空不修改
+            {% else %}QQ / 163 等需使用邮箱后台生成的「授权码」{% endif %}
+          </div>
+        {% endif %}
+      </div>
+      <div class="col-md-4 d-flex flex-column justify-content-center">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="smtp_enabled" value="1"
+                 id="swSmtp" {% if cfg.smtp_enabled %}checked{% endif %}>
+          <label class="form-check-label" for="swSmtp">
+            <strong>启用 SMTP 发信</strong>
+            <div class="th-sub">关闭后所有邮件（含通知）都不会发出</div>
+          </label>
+        </div>
+        {% if cfg.has_password %}
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" name="clear_password" value="1" id="clearPwd">
+            <label class="form-check-label small text-danger" for="clearPwd">清除已保存的密码</label>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="col-md-5">
+        <label class="form-label">测试收件邮箱</label>
+        <input type="text" name="test_recipient" class="form-control" form="formMail"
+               placeholder="留空则发到发件邮箱自身" value="{{ cfg.smtp_user }}">
+        <div class="form-text">测试会用上面填的参数直接连接，不必先保存</div>
+      </div>
+      <div class="col-md-7 d-flex align-items-end">
+        <button class="btn btn-outline-primary btn-sm" type="submit" formnovalidate
+                formaction="{{ url_for('settings.mail_test') }}" form="formMail">
+          <i class="bi bi-lightning-charge"></i> 发送测试邮件
+        </button>
+      </div>
+    </div>
+  </form>
+  <div class="card-foot">
+      <button class="btn btn-primary btn-sm" type="submit" form="formMail">
+        <i class="bi bi-check2"></i> 保存邮件配置
+      </button>
+      <form method="post" action="{{ url_for('settings.reset_group', group='mail') }}"
+            data-confirm="将邮件服务配置恢复为默认值（服务器、账号、密码都会被清空），确认继续？"
+            data-confirm-danger="0" data-confirm-ok="恢复默认">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-light btn-sm" type="submit">
+          <i class="bi bi-arrow-counterclockwise"></i> 恢复默认
+        </button>
+      </form>
+    </div>
+</div>
+
+<!-- ==================== 3. 邮件功能开关 ==================== -->
+<div class="card" id="features">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-toggles"></i> 邮件功能</span>
+    <span class="perm-hint">依赖上方 SMTP 服务</span>
+  </div>
+  <form id="formFeatures" method="post" action="{{ url_for('settings.save_features') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card-body row g-4">
+      <div class="col-lg-6">
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" name="email_register" value="1"
+                 id="swMailRegister" {% if cfg.email_register %}checked{% endif %}>
+          <label class="form-check-label" for="swMailRegister">
+            <strong>邮箱注册</strong>
+            <div class="th-sub">注册必须填邮箱，点击邮件里的链接完成验证</div>
+          </label>
+        </div>
+        <div class="form-check form-switch mb-3 ms-4">
+          <input class="form-check-input" type="checkbox" name="email_auto_activate" value="1"
+                 id="swAuto" {% if cfg.email_auto_activate %}checked{% endif %}>
+          <label class="form-check-label small" for="swAuto">
+            验证通过后自动激活账号（关闭则仍需管理员审批）
+          </label>
+        </div>
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="email_reset" value="1"
+                 id="swReset" {% if cfg.email_reset %}checked{% endif %}>
+          <label class="form-check-label" for="swReset">
+            <strong>邮箱找回密码</strong>
+            <div class="th-sub">登录页显示「忘记密码」，链接 30 分钟内有效且只能用一次</div>
+          </label>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" name="email_notify" value="1"
+                 id="swNotify" {% if cfg.email_notify %}checked{% endif %}>
+          <label class="form-check-label" for="swNotify">
+            <strong>重要操作邮件通知</strong>
+            <div class="th-sub">发送给启用中且填写了邮箱的管理员</div>
+          </label>
+        </div>
+        {% if errors.get('notify_events') %}
+          <div class="text-danger small mb-1">{{ errors.notify_events }}</div>
+        {% endif %}
+        <div class="notify-events">
+          {% for ev in notify_events %}
+            <label class="notify-chip {% if ev in cfg.notify_events_list %}is-on{% endif %}">
+              <input type="checkbox" name="notify_events" value="{{ ev }}"
+                     {% if ev in cfg.notify_events_list %}checked{% endif %}> {{ ev }}
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </form>
+  <div class="card-foot">
+      <button class="btn btn-primary btn-sm" type="submit" form="formFeatures">
+        <i class="bi bi-check2"></i> 保存功能开关
+      </button>
+      <form method="post" action="{{ url_for('settings.reset_group', group='features') }}"
+            data-confirm="将邮件功能开关恢复默认（全部关闭），确认继续？"
+            data-confirm-danger="0" data-confirm-ok="恢复默认">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-light btn-sm" type="submit">
+          <i class="bi bi-arrow-counterclockwise"></i> 恢复默认
+        </button>
+      </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // 通知事件选中态高亮
+  document.querySelectorAll('.notify-chip input').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      cb.closest('.notify-chip').classList.toggle('is-on', cb.checked);
+    });
+  });
+  // 总开关关闭时，把依赖项置灰提示
+  (function () {
+    var master = document.getElementById('swSmtp');
+    if (!master) { return; }
+    ['swMailRegister', 'swReset', 'swNotify', 'swAuto'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) { return; }
+      var box = el.closest('.form-check');
+      if (box) { box.style.opacity = master.checked ? '1' : '.55'; }
+    });
+    master.addEventListener('change', function () {
+      ['swMailRegister', 'swReset', 'swNotify', 'swAuto'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) { return; }
+        var box = el.closest('.form-check');
+        if (box) { box.style.opacity = master.checked ? '1' : '.55'; }
+      });
+    });
+  })();
+</script>
+{% endblock %}

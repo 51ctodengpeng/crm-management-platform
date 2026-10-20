@@ -1,0 +1,42 @@
+[Unit]
+Description=CRM Customer Management System (Flask + Gunicorn @127.0.0.1:5050)
+After=network.target mysqld.service
+Wants=mysqld.service
+
+[Service]
+Type=simple
+User=crm
+Group=crm
+WorkingDirectory=/opt/crm
+
+# 数据库密码、SECRET_KEY 等全部从这里注入，不写进代码、不进 git
+EnvironmentFile=/opt/crm/deploy/crm.env
+
+# 只监听回环地址，公网只能经 Nginx 的 443 进来
+# 日志走 journald（journalctl -u crm），不落 /var/log，避免权限问题
+ExecStart=/opt/crm/venv/bin/gunicorn app:app \
+    --bind 127.0.0.1:5050 \
+    --workers 2 \
+    --threads 4 \
+    --worker-class gthread \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --max-requests 800 \
+    --max-requests-jitter 80
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillSignal=SIGTERM
+
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crm
+
+# 最小权限：不获取新特权、不写系统目录
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

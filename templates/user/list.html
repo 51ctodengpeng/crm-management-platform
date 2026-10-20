@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block title %}账号管理{% endblock %}
+{% block page_title %}账号管理{% endblock %}
+{% block page_sub %}共 {{ pagination.total }} 个账号 · 新注册账号需审批通过后才能登录{% endblock %}
+
+{% block actions %}
+<a class="btn btn-primary btn-sm" href="{{ url_for('user.new_user') }}">
+  <i class="bi bi-person-plus-fill"></i> 新建账号
+</a>
+<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.register') }}" target="_blank">
+  <i class="bi bi-box-arrow-up-right"></i> 注册页预览
+</a>
+{% endblock %}
+
+{% block content %}
+
+{% if counts.get('pending') %}
+  <div class="approve-banner">
+    <div class="ab-icon"><i class="bi bi-shield-check"></i></div>
+    <div class="ab-text">
+      有 <strong>{{ counts.get('pending') }}</strong> 个注册申请等待审批，审批通过后对方才能登录系统
+    </div>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('user.list_users', status='pending') }}">
+      立即处理
+    </a>
+  </div>
+{% endif %}
+
+<!-- 状态统计 -->
+<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+  <a class="stat-card" href="{{ url_for('user.list_users') }}">
+    <div class="stat-icon"><i class="bi bi-people"></i></div>
+    <div><div class="stat-value num">{{ counts.values() | sum }}</div>
+      <div class="stat-label">账号总数</div></div>
+  </a>
+  <a class="stat-card" href="{{ url_for('user.list_users', status='pending') }}">
+    <div class="stat-icon orange"><i class="bi bi-hourglass-split"></i></div>
+    <div><div class="stat-value num">{{ counts.get('pending', 0) }}</div>
+      <div class="stat-label">待审批</div></div>
+  </a>
+  <a class="stat-card" href="{{ url_for('user.list_users', status='active') }}">
+    <div class="stat-icon green"><i class="bi bi-person-check"></i></div>
+    <div><div class="stat-value num">{{ counts.get('active', 0) }}</div>
+      <div class="stat-label">已启用</div></div>
+  </a>
+  <a class="stat-card" href="{{ url_for('user.list_users', status='disabled') }}">
+    <div class="stat-icon cyan"><i class="bi bi-person-dash"></i></div>
+    <div><div class="stat-value num">{{ counts.get('disabled', 0) }}</div>
+      <div class="stat-label">已停用</div></div>
+  </a>
+</div>
+
+<form class="filter-bar row g-2 align-items-center" method="get" data-auto-filter>
+  <div class="col-md-4">
+    <input type="text" name="q" value="{{ keyword }}" class="form-control" data-autofocus
+           placeholder="搜索账号 / 姓名 / 邮箱 / 手机 / 部门">
+  </div>
+  <div class="col-md-2">
+    <select name="status" class="form-select">
+      <option value="">全部状态</option>
+      {% for key, label in USER_STATUSES.items() %}
+        <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="role" class="form-select">
+      <option value="">全部角色</option>
+      {% for key, label in USER_ROLES.items() %}
+        <option value="{{ key }}" {% if role == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4 d-flex gap-2 align-items-center">
+    <a class="btn btn-light" href="{{ url_for('user.list_users') }}">重置</a>
+    <span class="perm-hint">条件即时生效</span>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:210px">账号 / 姓名</th>
+          <th>部门</th>
+          <th>联系方式</th>
+          <th style="width:90px">角色</th>
+          <th style="width:92px">状态</th>
+          <th style="width:120px">注册时间</th>
+          <th style="width:120px">最后登录</th>
+          <th style="width:270px" class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in pagination.items %}
+          <tr {% if u.status == 'pending' %}style="background:#fffbf3"{% endif %}>
+            <td>
+              <span class="mini-avatar">
+                {% if u.avatar_url %}<img src="{{ u.avatar_url }}" alt="">{% else %}{{ u.initial }}{% endif %}
+              </span>
+              <a class="company-link" href="{{ url_for('user.detail', uid=u.id) }}">{{ u.username }}</a>
+              <div class="cell-sub">{{ u.real_name or '未填写姓名' }}{% if u.id == current_user.id %} · 当前登录{% endif %}</div>
+            </td>
+            <td>{{ u.department or '-' }}</td>
+            <td>
+              {% if u.phone %}<div>{{ u.phone }}</div>{% endif %}
+              {% if u.email %}<div class="cell-sub">{{ u.email }}</div>{% endif %}
+              {% if not u.phone and not u.email %}-{% endif %}
+            </td>
+            <td>
+              <span class="badge-soft {% if u.is_admin %}red{% else %}gray{% endif %}">{{ u.role_label }}</span>
+            </td>
+            <td>
+              <span class="badge-soft {{ u.status_color }}">{{ u.status_label }}</span>
+              {% if u.is_locked %}
+                <span class="badge-soft red" title="连续密码错误次数过多">已锁定 {{ u.lock_remain_minutes }}′</span>
+              {% endif %}
+            </td>
+            <td class="text-muted">{{ u.create_time | dt('%Y-%m-%d') }}</td>
+            <td class="text-muted">{{ u.last_login | dt('%Y-%m-%d') }}</td>
+            <td class="text-end">
+              {% if u.status == 'pending' %}
+                <form method="post" action="{{ url_for('user.approve', uid=u.id) }}" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-primary" type="submit">
+                    <i class="bi bi-check2"></i> 通过
+                  </button>
+                </form>
+                <button class="btn btn-sm btn-outline-danger" type="button"
+                        data-bs-toggle="modal" data-bs-target="#rejectModal"
+                        data-action="{{ url_for('user.reject', uid=u.id) }}"
+                        data-name="{{ u.display_name }}">
+                  拒绝
+                </button>
+              {% else %}
+                {% if u.status == 'active' %}
+                  <form method="post" action="{{ url_for('user.toggle_status', uid=u.id) }}" class="d-inline"
+                        data-confirm="确认停用「{{ u.display_name }}」？停用后该账号将无法登录。">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-outline-danger" type="submit" {% if u.id == current_user.id %}disabled{% endif %}>停用</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{{ url_for('user.toggle_status', uid=u.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-outline-primary" type="submit">启用</button>
+                  </form>
+                {% endif %}
+              {% endif %}
+
+              <div class="btn-group">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" aria-expanded="false">更多</button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <button class="dropdown-item" type="button" data-bs-toggle="modal"
+                            data-bs-target="#pwdModal"
+                            data-action="{{ url_for('user.reset_password', uid=u.id) }}"
+                            data-name="{{ u.display_name }}">
+                      <i class="bi bi-key"></i> 重置密码
+                    </button>
+                  </li>
+                  <li>
+                    <form method="post" action="{{ url_for('user.change_role', uid=u.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="role" value="{{ 'user' if u.is_admin else 'admin' }}">
+                      <button class="dropdown-item" type="submit">
+                        <i class="bi bi-arrow-repeat"></i>
+                        {{ '取消管理员' if u.is_admin else '设为管理员' }}
+                      </button>
+                    </form>
+                  </li>
+                  <li><a class="dropdown-item" href="{{ url_for('user.detail', uid=u.id) }}">
+                    <i class="bi bi-card-text"></i> 账号详情</a></li>
+                  {% if not u.is_admin %}
+                    <li><a class="dropdown-item" href="{{ url_for('perm.edit_perms', uid=u.id) }}">
+                      <i class="bi bi-shield-lock"></i> 权限配置</a></li>
+                  {% endif %}
+                  {% if u.is_locked or u.failed_count %}
+                    <li>
+                      <form method="post" action="{{ url_for('user.unlock', uid=u.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="dropdown-item" type="submit">
+                          <i class="bi bi-unlock"></i> 解除锁定
+                        </button>
+                      </form>
+                    </li>
+                  {% endif %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <form method="post" action="{{ url_for('user.delete', uid=u.id) }}"
+                          data-confirm="确认删除账号「{{ u.display_name }}」？该操作不可恢复。">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="dropdown-item text-danger" type="submit"
+                              {% if u.id == current_user.id %}disabled{% endif %}>
+                        <i class="bi bi-trash"></i> 删除账号
+                      </button>
+                    </form>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="empty-state"><i class="bi bi-people"></i>没有符合条件的账号</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pagination.pages > 1 %}
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <div class="text-muted small">第 {{ pagination.page }} / {{ pagination.pages }} 页</div>
+      <nav>
+        <ul class="pagination pagination-sm">
+          <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('user.list_users', page=pagination.prev_num, q=keyword, status=status, role=role) }}">上一页</a>
+          </li>
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+              <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('user.list_users', page=p, q=keyword, status=status, role=role) }}">{{ p }}</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+          <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('user.list_users', page=pagination.next_num, q=keyword, status=status, role=role) }}">下一页</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+
+<!-- 拒绝申请弹窗 -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" method="post" id="rejectForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-x-circle text-danger"></i> 拒绝注册申请</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">即将拒绝 <strong id="rejectName"></strong> 的注册申请。</p>
+        <label class="form-label">拒绝原因</label>
+        <textarea name="review_remark" class="form-control" rows="3"
+                  placeholder="例如：非公司成员 / 信息不完整，该原因会展示给申请人"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-danger btn-sm">确认拒绝</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 重置密码弹窗 -->
+<div class="modal fade" id="pwdModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" method="post" id="pwdForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-key text-primary"></i> 重置密码</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">为 <strong id="pwdName"></strong> 设置一个新的登录密码。</p>
+        <label class="form-label">新密码</label>
+        <input type="text" name="new_password" class="form-control" minlength="6" required
+               placeholder="至少 8 位，需字母+数字">
+        <div class="form-text">重置后请通过安全渠道告知本人，并提醒其自行修改。</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary btn-sm">确认重置</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('rejectModal').addEventListener('show.bs.modal', function (e) {
+    document.getElementById('rejectForm').action = e.relatedTarget.dataset.action;
+    document.getElementById('rejectName').textContent = e.relatedTarget.dataset.name;
+  });
+  document.getElementById('pwdModal').addEventListener('show.bs.modal', function (e) {
+    document.getElementById('pwdForm').action = e.relatedTarget.dataset.action;
+    document.getElementById('pwdName').textContent = e.relatedTarget.dataset.name;
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}个人资料{% endblock %}
+{% block page_title %}个人资料{% endblock %}
+{% block page_sub %}维护本人姓名、微信号与联系方式，头像会显示在侧边栏{% endblock %}
+
+{% block actions %}
+<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.change_password') }}">
+  <i class="bi bi-shield-lock"></i> 修改密码
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- ================= 头像 ================= -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-person-badge"></i> 我的头像</div>
+      <div class="card-body avatar-panel">
+        <div class="avatar-lg">
+          {% if current_user.avatar_url %}
+            <img src="{{ current_user.avatar_url }}" alt="{{ current_user.display_name }}">
+          {% else %}{{ current_user.initial }}{% endif %}
+        </div>
+        <div class="fw-semibold">{{ current_user.display_name }}</div>
+        <div class="text-muted small mb-3">{{ current_user.role_label }} · {{ current_user.scope_label }}</div>
+
+        <form method="post" action="{{ url_for('profile.upload_avatar') }}"
+              enctype="multipart/form-data" class="text-start">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ url_for('profile.edit') }}">
+          <label class="form-label">选择图片</label>
+          <input type="file" name="avatar" class="form-control form-control-sm" required
+                 accept=".jpg,.jpeg,.png,.gif,.bmp,.webp">
+          <div class="form-text">支持 jpg / png / gif / bmp / webp，单张不超过 2MB。</div>
+          <button class="btn btn-primary btn-sm w-100 mt-2" type="submit">
+            <i class="bi bi-upload"></i> 上传头像
+          </button>
+        </form>
+
+        {% if current_user.avatar %}
+          <form method="post" action="{{ url_for('profile.delete_avatar') }}" class="mt-2"
+                data-confirm="确认移除当前头像？将恢复为姓名首字母。">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ url_for('profile.edit') }}">
+            <button class="btn btn-sm btn-outline-danger w-100" type="submit">
+              <i class="bi bi-trash"></i> 移除头像
+            </button>
+          </form>
+        {% endif %}
+
+        <div class="avatar-tip mt-3 text-start">
+          未设置头像时显示姓名首字；头像由本人维护，管理员也可在账号详情中代为更换。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 资料表单 ================= -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-person-vcard"></i> 基本信息</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('profile.edit') }}" class="row g-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-md-6">
+            <label class="form-label">登录账号</label>
+            <input type="text" class="form-control mono" value="{{ current_user.username }}" disabled>
+            <div class="form-text">如需修改账号名，请联系管理员。</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required">姓名</label>
+            <input type="text" name="real_name" class="form-control" required maxlength="64"
+                   value="{{ current_user.real_name or '' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">微信号</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-wechat"></i></span>
+              <input type="text" name="wechat" class="form-control" maxlength="64"
+                     placeholder="用于内部沟通与协作"
+                     value="{{ current_user.wechat or '' }}">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">所属部门</label>
+            <input type="text" name="department" class="form-control" maxlength="64"
+                   value="{{ current_user.department or '' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">手机号</label>
+            <input type="text" name="phone" class="form-control" maxlength="32"
+                   value="{{ current_user.phone or '' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">邮箱</label>
+            <input type="text" name="email" class="form-control" maxlength="128"
+                   value="{{ current_user.email or '' }}">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-primary btn-sm" type="submit">
+              <i class="bi bi-check2"></i> 保存资料
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header"><i class="bi bi-shield-check"></i> 我的权限</div>
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-item"><div class="label">角色</div><div class="value">{{ current_user.role_label }}</div></div>
+          <div class="info-item"><div class="label">数据范围</div><div class="value">{{ current_user.scope_label }}</div></div>
+          <div class="info-item"><div class="label">新增客户 / 项目</div>
+            <div class="value">{{ '允许' if current_user.can_create_data else '不允许' }}</div></div>
+          <div class="info-item"><div class="label">授权项目</div>
+            <div class="value">
+              {% if current_user.is_admin %}全部项目
+              {% else %}{{ current_user.project_permissions | length }} 个{% endif %}
+            </div></div>
+        </div>
+        {% if not current_user.is_admin %}
+          <div class="perm-hint mt-2">
+            <i class="bi bi-info-circle"></i> 项目授权由管理员在「权限管理」中分配，如需调整请联系管理员。
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

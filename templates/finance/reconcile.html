@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}收款对账{% endblock %}
+{% block page_title %}收款对账{% endblock %}
+{% block page_sub %}
+  待对账 <span class="num">{{ summary.pending_count }}</span> 笔（¥ {{ summary.pending_amount | money }}）
+  · 已对账 <span class="num">{{ summary.matched_count }}</span> 笔（¥ {{ summary.matched_amount | money }}）
+{% endblock %}
+
+{% block actions %}
+<a class="btn btn-outline-success btn-sm"
+   href="{{ url_for('export.export_payments', q=keyword, status=status, method=method) }}"
+   data-confirm-template="#tplExportPayments">
+  <i class="bi bi-file-earmark-excel"></i> 导出流水
+</a>
+{% endblock %}
+
+{% block content %}
+<form class="filter-bar row g-2 align-items-center" method="get" data-auto-filter>
+  <div class="col-md-4">
+    <input type="text" name="q" value="{{ keyword }}" class="form-control" data-autofocus
+           placeholder="项目名称 / 流水号 / 付款方 / 备注">
+  </div>
+  <div class="col-md-2">
+    <select name="status" class="form-select">
+      <option value="">全部状态</option>
+      {% for key, label in statuses.items() %}
+        <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="method" class="form-select">
+      <option value="">全部方式</option>
+      {% for m in methods %}
+        <option value="{{ m }}" {% if method == m %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4 d-flex gap-2 align-items-center">
+    <select name="per_page" class="form-select" style="max-width:96px">
+      {% for n in [10, 20, 50, 100] %}
+        <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }} 条/页</option>
+      {% endfor %}
+    </select>
+    <a class="btn btn-light" href="{{ url_for('finance.reconcile') }}">重置</a>
+    <span class="perm-hint d-none d-xl-inline">条件即时生效</span>
+  </div>
+</form>
+
+<div class="money-tiles mb-3">
+  <div class="money-tile">
+    <span class="label">待对账金额</span>
+    <span class="value num c-orange">¥ {{ summary.pending_amount | money }}</span>
+  </div>
+  <div class="money-tile">
+    <span class="label">已对账金额</span>
+    <span class="value num c-green">¥ {{ summary.matched_amount | money }}</span>
+  </div>
+  <div class="money-tile">
+    <span class="label">其中转账 / 现金</span>
+    <span class="value num">¥ {{ summary.transfer_amount | money }} / {{ summary.cash_amount | money }}</span>
+  </div>
+  <div class="money-tile">
+    <span class="label">对账口径</span>
+    <span class="value" style="font-size:12.5px;font-weight:500">
+      应收＝项目含税价；已收＝已对账金额；差额＝应收−已收
+    </span>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('finance.batch_reconcile') }}" id="bulkPayForm" data-bulk-form="1">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="bulk-bar" id="bulkBar">
+    <span class="bulk-count">已选 <strong id="bulkCount">0</strong> 笔</span>
+    <label class="d-flex align-items-center gap-1 small text-muted mb-0">
+      <input type="checkbox" name="allow_over" value="1"> 允许超收对账
+    </label>
+    <button class="btn btn-sm btn-primary" type="submit">批量对账</button>
+    <button class="btn btn-sm btn-light" type="button" id="bulkClear">取消选择</button>
+    <span class="perm-hint">逐笔校验：金额 &gt; 0、流水号不重复、不超应收；不通过的自动跳过</span>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="check-col"><input type="checkbox" class="check-all" id="checkAll" title="全选待对账记录"></th>
+          <th>项目 / 客户</th>
+          <th class="text-end">金额</th>
+          <th>付款方式</th>
+          <th>流水号</th>
+          <th>到账日期</th>
+          <th>状态</th>
+          <th style="width:200px" class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pay in payments %}
+          <tr>
+            <td class="check-col">
+              {% if pay.status == 'pending' %}
+                <input type="checkbox" class="row-check" form="bulkPayForm" name="ids" value="{{ pay.id }}">
+              {% else %}
+                <i class="bi bi-check2 text-success" title="已对账"></i>
+              {% endif %}
+            </td>
+            <td>
+              <a class="company-link" href="{{ url_for('project.detail', pid=pay.project_id) }}#payments">
+                {{ pay.project.project_name | shortname(24) }}
+              </a>
+              <div class="th-sub">{{ pay.project.customer.company_name | shortname(20) }}</div>
+            </td>
+            <td class="text-end num">¥ {{ pay.amount | money }}</td>
+            <td><span class="badge-soft {{ pay.method_color }}">{{ pay.method_label }}</span></td>
+            <td class="mono" style="font-size:12px">{{ pay.trade_no or '—' }}</td>
+            <td class="mono">{{ pay.paid_at | dt('%Y-%m-%d') }}</td>
+            <td>
+              <span class="badge-soft {{ pay.status_color }}">{{ pay.status_label }}</span>
+              {% if pay.status == 'matched' and pay.reconciled_by %}
+                <div class="th-sub">{{ pay.reconciled_by }} · {{ pay.reconciled_at | dt('%m-%d %H:%M') }}</div>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if pay.status == 'pending' and can_edit_project(pay.project) %}
+                <form method="post" action="{{ url_for('finance.reconcile_one', pay_id=pay.id) }}"
+                      class="d-inline"
+                      data-confirm="确认对账 ¥{{ pay.amount | money }}（{{ pay.method_label }}）？对账后计入已收。"
+                      data-confirm-danger="0" data-confirm-ok="确认对账">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="next" value="{{ url_for('finance.reconcile') }}">
+                  <button class="btn btn-sm btn-outline-primary" type="submit">对账</button>
+                </form>
+              {% elif pay.status == 'matched' and can_delete_project(pay.project) %}
+                <form method="post" action="{{ url_for('finance.unreconcile', pay_id=pay.id) }}"
+                      class="d-inline"
+                      data-confirm="撤销对账后该笔 ¥{{ pay.amount | money }} 不再计入已收，确认撤销？">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="next" value="{{ url_for('finance.reconcile') }}">
+                  <button class="btn btn-sm btn-outline-secondary" type="submit">撤销</button>
+                </form>
+              {% endif %}
+              <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('project.detail', pid=pay.project_id) }}#payments">项目</a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8" class="empty-state">
+              <i class="bi bi-cash-coin"></i>
+              {% if keyword or status or method %}没有符合条件的收款记录{% else %}还没有收款记录，可在项目详情页登记收款{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pagination and pagination.pages > 1 %}
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <div class="text-muted small">
+        第 {{ pagination.page }} / {{ pagination.pages }} 页 · 共 {{ pagination.total }} 条
+        （本页 {{ payments|length }} 条，合计 ¥ {{ payments | sum(attribute='amount') | money }}）
+      </div>
+      <nav>
+        <ul class="pagination pagination-sm">
+          <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('finance.reconcile', page=pagination.prev_num, q=keyword, status=status, method=method, per_page=per_page) }}">上一页</a>
+          </li>
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+              <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('finance.reconcile', page=p, q=keyword, status=status, method=method, per_page=per_page) }}">{{ p }}</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+          <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('finance.reconcile', page=pagination.next_num, q=keyword, status=status, method=method, per_page=per_page) }}">下一页</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/bulk.js') }}"></script>
+{% endblock %}

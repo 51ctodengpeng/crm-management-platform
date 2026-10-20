@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}导入预览{% endblock %}
+{% block page_title %}导入预览 · {{ meta.label }}{% endblock %}
+{% block page_sub %}
+  共 {{ rows | length }} 行：可导入 {{ counts.new }} · 跳过 {{ counts.skip }} · 错误 {{ counts.error }}
+{% endblock %}
+
+{% block content %}
+
+<div class="todo-grid" style="grid-template-columns:repeat(3,1fr)">
+  <div class="todo-tile">
+    <span class="todo-tile__icon"><i class="bi bi-check2-circle"></i></span>
+    <span class="todo-tile__value num">{{ counts.new }}</span>
+    <span class="todo-tile__label">可导入</span>
+    <span class="todo-tile__hint">校验通过，确认后写入系统</span>
+  </div>
+  <div class="todo-tile">
+    <span class="todo-tile__icon"><i class="bi bi-skip-forward"></i></span>
+    <span class="todo-tile__value num">{{ counts.skip }}</span>
+    <span class="todo-tile__label">自动跳过</span>
+    <span class="todo-tile__hint">系统内已存在重复记录</span>
+  </div>
+  <div class="todo-tile {% if counts.error %}is-danger{% endif %}">
+    <span class="todo-tile__icon"><i class="bi bi-exclamation-triangle"></i></span>
+    <span class="todo-tile__value num">{{ counts.error }}</span>
+    <span class="todo-tile__label">错误行</span>
+    <span class="todo-tile__hint">需修正后重新上传</span>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-list-check"></i> 明细</span>
+    <div class="d-flex gap-2">
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('imports.index') }}">
+        <i class="bi bi-arrow-left"></i> 重新上传
+      </a>
+      <form method="post" action="{{ url_for('imports.commit') }}"
+            data-confirm="确认导入 {{ counts.new }} 条{{ meta.label }}数据？导入后可在列表中继续修改。"
+            data-confirm-title="确认导入" data-confirm-ok="开始导入">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="token" value="{{ token }}">
+        <button class="btn btn-sm btn-primary" type="submit" {% if not counts.new %}disabled{% endif %}>
+          <i class="bi bi-check2"></i> 确认导入 {{ counts.new }} 条
+        </button>
+      </form>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-wrap">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th style="width:70px">行号</th>
+            {% for name, field, required, _ in columns %}
+              {% if loop.index <= 5 %}
+                <th>{{ name }}</th>
+              {% endif %}
+            {% endfor %}
+            <th style="width:90px">状态</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr {% if r.status == 'error' %}style="background:#fff6f6"
+                {% elif r.status == 'skip' %}style="background:#fafbfc"{% endif %}>
+              <td class="text-muted num">{{ r.row }}</td>
+              {% for name, field, required, _ in columns %}
+                {% if loop.index <= 5 %}
+                  <td>{{ r.data.get(field) or '' }}</td>
+                {% endif %}
+              {% endfor %}
+              <td>
+                {% if r.status == 'new' %}
+                  <span class="badge-soft green">可导入</span>
+                {% elif r.status == 'skip' %}
+                  <span class="badge-soft gray">跳过</span>
+                {% else %}
+                  <span class="badge-soft red">错误</span>
+                {% endif %}
+              </td>
+              <td class="text-muted" style="font-size:12.5px">{{ r.message or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

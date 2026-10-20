@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>申请注册 · {{ APP_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>(function(){try{var t=localStorage.getItem('crm-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-bs-theme',t);}}catch(e){}})();</script>
+
+</head>
+<body>
+<button class="theme-toggle theme-toggle--float" type="button" data-theme-toggle
+        aria-pressed="false" title="切换到夜间模式">
+  <i class="bi bi-moon-stars"></i><span data-theme-label>夜间</span>
+</button>
+
+<div class="auth-page" style="align-items:start;padding-top:5vh">
+  <div class="auth-card" style="max-width:468px">
+    <div class="auth-logo"><i class="bi bi-person-plus-fill"></i></div>
+    <div class="auth-title">申请注册账号</div>
+    <div class="auth-sub">提交后进入管理员审批队列，通过后即可登录</div>
+
+    <div class="steps">
+      <div class="step done" data-step="1">填写资料</div>
+      <div class="step" data-step="2">等待审批</div>
+      <div class="step" data-step="3">审批通过</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} py-2 small mb-2">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="row g-2">
+        <div class="col-6">
+          <label class="form-label required">登录账号</label>
+          <input type="text" name="username" class="form-control" required
+                 value="{{ form.get('username', '') }}" placeholder="字母数字 3-32 位">
+        </div>
+        <div class="col-6">
+          <label class="form-label required">姓名</label>
+          <input type="text" name="real_name" class="form-control" required
+                 value="{{ form.get('real_name', '') }}" placeholder="真实姓名">
+        </div>
+        <div class="col-6">
+          <label class="form-label">手机号</label>
+          <input type="text" name="phone" class="form-control"
+                 value="{{ form.get('phone', '') }}" placeholder="选填">
+        </div>
+        <div class="col-6">
+          <label class="form-label">微信号</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-wechat"></i></span>
+            <input type="text" name="wechat" class="form-control"
+                   value="{{ form.get('wechat', '') }}" placeholder="选填">
+          </div>
+        </div>
+        <div class="col-6">
+          <label class="form-label">所属部门</label>
+          <input type="text" name="department" class="form-control"
+                 value="{{ form.get('department', '') }}" placeholder="选填，如：售前部">
+        </div>
+        <div class="col-6">
+          <label class="form-label {% if email_register %}required{% endif %}">邮箱</label>
+          <input type="text" name="contact_email" class="form-control" autocomplete="email"
+                 {% if email_register %}required{% endif %}
+                 value="{{ form.get('contact_email', '') or form.get('email', '') }}"
+                 placeholder="{{ '接收验证邮件，必填' if email_register else '选填' }}">
+          {% if email_register %}
+            <div class="form-text">会发送验证链接；验证通过{{ '即自动激活账号' if EMAIL_AUTO else '后仍需管理员审批' }}</div>
+          {% endif %}
+        </div>
+        <div class="col-6">
+          <label class="form-label required">密码</label>
+          <input type="password" name="password" class="form-control" required minlength="6"
+                 placeholder="至少 8 位，字母+数字">
+        </div>
+        <div class="col-6">
+          <label class="form-label required">确认密码</label>
+          <input type="password" name="confirm_password" class="form-control" required minlength="6"
+                 placeholder="再次输入">
+        </div>
+        <div class="col-12">
+          <label class="form-label">申请说明</label>
+          <textarea name="apply_reason" class="form-control" rows="2"
+                    placeholder="选填：说明岗位或使用用途，便于管理员审批">{{ form.get('apply_reason', '') }}</textarea>
+        </div>
+      </div>
+
+      <button class="btn btn-primary w-100 mt-3 py-2" type="submit">
+        <i class="bi bi-send"></i> 提交注册申请
+      </button>
+    </form>
+
+    <div class="auth-foot">
+      已有账号？<a href="{{ url_for('auth.login') }}">返回登录</a>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

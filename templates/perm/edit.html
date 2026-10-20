@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}权限配置 · {{ user.display_name }}{% endblock %}
+{% block page_title %}权限配置{% endblock %}
+{% block page_sub %}
+  {{ user.display_name }} · 账号 {{ user.username }}
+  <span class="badge-soft {{ 'red' if user.is_admin else 'gray' }} ms-1">{{ user.role_label }}</span>
+  <span class="badge-soft {{ user.status_color }} ms-1">{{ user.status_label }}</span>
+{% endblock %}
+
+{% block actions %}
+<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('perm.list_perms') }}">返回权限列表</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('user.detail', uid=user.id) }}">账号详情</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" action="{{ url_for('perm.edit_perms', uid=user.id) }}" id="permForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <!-- ================= 账号级：数据范围与新增能力 ================= -->
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-diagram-3"></i> 数据范围</div>
+    <div class="card-body">
+      <div class="scope-options">
+        <label class="scope-option {% if (user.data_scope or 'assigned') == 'assigned' %}is-active{% endif %}">
+          <input type="radio" name="data_scope" value="assigned"
+                 {% if (user.data_scope or 'assigned') == 'assigned' %}checked{% endif %}>
+          <div>
+            <div class="so-title">仅授权项目</div>
+            <div class="so-desc">最小权限原则：只能看到下方被勾选的项目及其所属客户，未授权项目不出现在列表、搜索与统计中。</div>
+          </div>
+        </label>
+        <label class="scope-option {% if user.data_scope == 'all' %}is-active{% endif %}">
+          <input type="radio" name="data_scope" value="all"
+                 {% if user.data_scope == 'all' %}checked{% endif %}>
+          <div>
+            <div class="so-title">全部数据</div>
+            <div class="so-desc">可见全部客户与项目，但操作仍受下方项目授权约束；下方授权会保留，切回「仅授权项目」时自动生效。</div>
+          </div>
+        </label>
+      </div>
+
+      <div class="form-check mt-3">
+        <input class="form-check-input" type="checkbox" name="can_create" id="canCreate"
+               {% if user.can_create %}checked{% endif %}>
+        <label class="form-check-label" for="canCreate">
+          允许新增客户 / 项目
+          <span class="text-muted small">（新增能力是全局开关，项目级授权只作用于已存在的项目）</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 项目级：逐项目授权 ================= -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-shield-check"></i> 项目授权</span>
+      <span class="perm-hint">已授权 <strong id="grantedCount">{{ granted_count }}</strong> / {{ projects|length }} 个项目</span>
+    </div>
+
+    <div class="perm-toolbar">
+      <input type="text" class="form-control form-control-sm" id="permSearch"
+             placeholder="筛选项目 / 客户" style="max-width:200px">
+
+      <span class="tb-label ms-1">按客户批量：</span>
+      <select class="form-select form-select-sm" id="bulkCustomer" style="max-width:190px">
+        <option value="">全部客户</option>
+        {% for c in customers %}
+          <option value="{{ c.id }}">{{ c.company_name | shortname(18) }}</option>
+        {% endfor %}
+      </select>
+      <select class="form-select form-select-sm" id="bulkLevel" style="max-width:120px">
+        <option value="view">仅查看</option>
+        <option value="edit">可修改</option>
+        <option value="delete">可删除</option>
+        <option value="none">清除权限</option>
+      </select>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="bulkApply">应用</button>
+
+      <span class="ms-auto d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-light" id="checkAllView">全部可见</button>
+        <button type="button" class="btn btn-sm btn-light" id="clearAll">全部清除</button>
+      </span>
+    </div>
+
+    <div class="perm-scroll">
+      <table class="table" id="permTable">
+        <thead>
+          <tr>
+            <th>项目</th>
+            <th style="width:150px">所属客户</th>
+            <th style="width:90px">状态</th>
+            <th class="perm-col">查看</th>
+            <th class="perm-col">修改</th>
+            <th class="perm-col">删除</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in projects %}
+            {% set perm = perms.get(p.id) %}
+            <tr class="perm-row" data-cid="{{ p.customer_id }}"
+                data-text="{{ (p.project_name ~ ' ' ~ p.customer.company_name)|lower }}">
+              <td>
+                <a class="company-link" href="{{ url_for('project.detail', pid=p.id) }}" target="_blank">{{ p.project_name }}</a>
+                <div class="cell-sub">{{ p.project_type or '未分类' }} · ¥ {{ p.project_amount | money }}</div>
+              </td>
+              <td class="perm-group-customer">{{ p.customer.company_name | shortname(16) }}</td>
+              <td><span class="badge-soft {{ p.status_color }}">{{ p.project_status }}</span></td>
+              <td class="text-center">
+                <input class="form-check-input perm-check chk-view" type="checkbox"
+                       name="p{{ p.id }}_view" value="1"
+                       {% if perm and perm.can_view %}checked{% endif %}>
+              </td>
+              <td class="text-center">
+                <input class="form-check-input perm-check chk-edit" type="checkbox"
+                       name="p{{ p.id }}_edit" value="1"
+                       {% if perm and perm.can_edit %}checked{% endif %}>
+              </td>
+              <td class="text-center">
+                <input class="form-check-input perm-check chk-delete" type="checkbox"
+                       name="p{{ p.id }}_delete" value="1"
+                       {% if perm and perm.can_delete %}checked{% endif %}>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="empty-state"><i class="bi bi-kanban"></i>系统中还没有项目，先录入项目后再授权</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-body border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="perm-hint">
+        <i class="bi bi-info-circle"></i>
+        权限向下包含：勾选「删除」自动包含「修改 + 查看」；勾选「修改」自动包含「查看」。
+      </div>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> 保存权限配置</button>
+    </div>
+  </div>
+</form>
+
+<!-- 清空授权（独立表单，避免嵌套） -->
+<div class="d-flex justify-content-end mt-2">
+  <form method="post" action="{{ url_for('perm.reset_perms', uid=user.id) }}"
+        data-confirm="确认清空「{{ user.display_name }}」的全部项目授权？清空后该成员将看不到任何项目。">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm btn-outline-danger" type="submit">
+      <i class="bi bi-eraser"></i> 清空全部授权
+    </button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var rows = Array.prototype.slice.call(document.querySelectorAll('tr.perm-row'));
+  var grantedEl = document.getElementById('grantedCount');
+
+  function updateCount() {
+    var n = rows.filter(function (r) {
+      return r.querySelector('.chk-view').checked;
+    }).length;
+    if (grantedEl) { grantedEl.textContent = n; }
+  }
+
+  // ---- 权限位联动：delete ⊃ edit ⊃ view ----
+  function sync(row, changed) {
+    var v = row.querySelector('.chk-view');
+    var e = row.querySelector('.chk-edit');
+    var d = row.querySelector('.chk-delete');
+    if (changed === v && !v.checked) { e.checked = false; d.checked = false; }
+    if (changed === e) {
+      if (e.checked) { v.checked = true; } else { d.checked = false; }
+    }
+    if (changed === d && d.checked) { e.checked = true; v.checked = true; }
+    updateCount();
+  }
+
+  rows.forEach(function (row) {
+    ['.chk-view', '.chk-edit', '.chk-delete'].forEach(function (sel) {
+      var cb = row.querySelector(sel);
+      cb.addEventListener('change', function () { sync(row, cb); });
+    });
+  });
+
+  // ---- 数据范围卡片高亮 ----
+  var scopeRadios = document.querySelectorAll('input[name="data_scope"]');
+  scopeRadios.forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      document.querySelectorAll('.scope-option').forEach(function (el) {
+        el.classList.remove('is-active');
+      });
+      if (radio.checked) { radio.closest('.scope-option').classList.add('is-active'); }
+    });
+  });
+
+  // ---- 按客户批量授权 ----
+  document.getElementById('bulkApply').addEventListener('click', function () {
+    var cid = document.getElementById('bulkCustomer').value;
+    var level = document.getElementById('bulkLevel').value;
+    rows.forEach(function (row) {
+      if (cid && row.dataset.cid !== cid) { return; }
+      var v = row.querySelector('.chk-view');
+      var e = row.querySelector('.chk-edit');
+      var d = row.querySelector('.chk-delete');
+      if (level === 'none') {
+        v.checked = e.checked = d.checked = false;
+      } else {
+        v.checked = true;
+        e.checked = (level === 'edit' || level === 'delete');
+        d.checked = (level === 'delete');
+      }
+    });
+    updateCount();
+  });
+
+  // ---- 全选 / 清空 ----
+  document.getElementById('checkAllView').addEventListener('click', function () {
+    rows.forEach(function (row) { row.querySelector('.chk-view').checked = true; });
+    updateCount();
+  });
+  document.getElementById('clearAll').addEventListener('click', function () {
+    rows.forEach(function (row) {
+      row.querySelector('.chk-view').checked = false;
+      row.querySelector('.chk-edit').checked = false;
+      row.querySelector('.chk-delete').checked = false;
+    });
+    updateCount();
+  });
+
+  // ---- 前端筛选 ----
+  document.getElementById('permSearch').addEventListener('input', function () {
+    var kw = this.value.trim().toLowerCase();
+    rows.forEach(function (row) {
+      row.style.display = (!kw || row.dataset.text.indexOf(kw) >= 0) ? '' : 'none';
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.company_name }}{% endblock %}
+{% block page_title %}{{ customer.company_name }}{% endblock %}
+{% block page_sub %}
+  <span class="badge-soft {{ level_color(customer.customer_level) }}">{{ customer.customer_level or '普通' }}</span>
+  {% if customer.business_type %}<span class="badge-soft gray ms-1">{{ customer.business_type }}</span>{% endif %}
+  {% if customer.source_channel %}<span class="badge-soft cyan ms-1"><i class="bi bi-diagram-3"></i> {{ customer.source_channel }}</span>{% endif %}
+  <span class="ms-2">{{ projects|length }} 个项目 · {{ attachment_count }} 个附件 · 累计 <span class="num">¥ {{ customer.total_amount | money }}</span></span>
+{% endblock %}
+
+{% block actions %}
+{% if can_create_data() %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('project.new_project', customer_id=customer.id) }}"><i class="bi bi-plus-lg"></i> 新增项目</a>
+{% endif %}
+{% if can_edit_customer(customer) %}
+  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('customer.edit_customer', cid=customer.id) }}"><i class="bi bi-pencil"></i> 编辑客户</a>
+{% endif %}
+<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('customer.list_customers') }}">返回列表</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-person-vcard"></i> 客户信息</div>
+      <div class="card-body">
+        <div class="info-grid" style="grid-template-columns:1fr">
+          <div class="info-item"><div class="label">来源渠道</div>
+            <div class="value">{% if customer.source_channel %}<span class="badge-soft cyan">{{ customer.source_channel }}</span>{% else %}-{% endif %}</div>
+          </div>
+          <div class="info-item"><div class="label">对接人</div>
+            <div class="value">{{ customer.contact_name or '-' }}
+              {% if customer.position %}<span class="th-sub">{{ customer.position }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="info-item"><div class="label">联系电话</div><div class="value mono">{{ customer.contact_phone or '-' }}</div></div>
+          <div class="info-item"><div class="label">微信号</div>
+            <div class="value mono">{% if customer.wechat %}<i class="bi bi-wechat text-success"></i> {{ customer.wechat }}{% else %}-{% endif %}</div>
+          </div>
+          <div class="info-item"><div class="label">邮箱</div><div class="value">{{ customer.contact_email or '-' }}</div></div>
+          <div class="info-item">
+            <div class="label">所在地区</div>
+            <div class="value">
+              {{ customer.region or '-' }}
+              {% if customer.region_levels %}
+                <div class="mt-1 d-flex flex-wrap gap-1">
+                  {% for name in customer.region_levels %}
+                    <span class="badge-soft {{ ['blue', 'cyan', 'green'][loop.index0] }}"
+                          title="{{ ['省级', '市级', '区县级'][loop.index0] }}">{{ name }}</span>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="info-item"><div class="label">详细地址</div><div class="value">{{ customer.address or '-' }}</div></div>
+          <div class="info-item"><div class="label">客户备注</div><div class="value">{{ customer.remark or '暂无备注' }}</div></div>
+          <div class="info-item"><div class="label">跟进</div>
+            <div class="value" style="font-size:12.5px">
+              最近：{{ customer.last_follow_at | dt('%Y-%m-%d') if customer.last_follow_at else '尚未跟进' }}
+              {% if customer.days_since_follow is not none %}<span class="th-sub">（{{ customer.days_since_follow }} 天前）</span>{% endif %}
+              <br>下次：{{ customer.next_follow_at | dt('%Y-%m-%d') if customer.next_follow_at else '未安排' }}
+              {% if customer.next_follow_at %}<span class="badge-soft {{ 'red' if customer.follow_state.startswith('逾期') else 'blue' }} ms-1">{{ customer.follow_state }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="info-item"><div class="label">录入 / 最后修改</div>
+            <div class="value" style="font-size:12.5px">{{ customer.created_at | dt }}<br>{{ customer.updated_at | dt }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-kanban"></i> 历史项目（{{ projects|length }}）</span>
+        {% if can_create_data() %}
+          <a class="small" href="{{ url_for('project.new_project', customer_id=customer.id) }}">+ 新增项目</a>
+        {% endif %}
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>项目名称</th><th>类型</th><th class="text-end">金额</th><th>周期</th><th>状态</th><th class="text-center">附件</th></tr>
+          </thead>
+          <tbody>
+            {% for p in projects %}
+              <tr>
+                <td><a class="company-link" href="{{ url_for('project.detail', pid=p.id) }}">{{ p.project_name }}</a></td>
+                <td>{{ p.project_type or '-' }}</td>
+                <td class="text-end num">¥ {{ p.project_amount | money }}</td>
+                <td class="text-muted" style="font-size:12.5px">
+                  {{ p.start_date | dt('%Y-%m-%d') if p.start_date else '—' }}
+                  ~ {{ p.end_date | dt('%Y-%m-%d') if p.end_date else '—' }}
+                </td>
+                <td><span class="badge-soft {{ p.status_color }}">{{ p.project_status }}</span></td>
+                <td class="text-center">
+                  {% if p.attachment_count %}
+                    <a href="{{ url_for('project.detail', pid=p.id) }}#attachments" class="badge-soft">
+                      <i class="bi bi-paperclip"></i> {{ p.attachment_count }}
+                    </a>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="6" class="empty-state"><i class="bi bi-kanban"></i>该客户还没有项目记录</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1" id="contacts">
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-people"></i> 联系人（{{ customer.contacts | length }}）</span>
+        <span class="text-muted" style="font-size:11.5px;font-weight:400">主联系人会同步到客户列表与导出</span>
+      </div>
+      <div class="card-body">
+        {% if customer.contacts %}
+          <div class="contact-grid">
+            {% for ct in customer.contacts %}
+              <div class="contact-card {% if ct.is_primary %}is-primary{% endif %}">
+                <div class="cc-head">
+                  <span class="cc-avatar">{{ ct.initial }}</span>
+                  <div style="min-width:0">
+                    <div class="cc-name">
+                      {{ ct.name }}
+                      {% if ct.is_primary %}<span class="badge-soft blue">主联系人</span>{% endif %}
+                    </div>
+                    <div class="cc-role">{{ ct.position or '未填写职位' }}</div>
+                  </div>
+                </div>
+                <div class="cc-body">
+                  <div><i class="bi bi-telephone"></i> {{ ct.phone or '-' }}</div>
+                  <div><i class="bi bi-envelope"></i> {{ ct.email or '-' }}</div>
+                  <div><i class="bi bi-wechat"></i> {{ ct.wechat or '-' }}</div>
+                  {% if ct.remark %}<div class="text-muted"><i class="bi bi-sticky"></i> {{ ct.remark }}</div>{% endif %}
+                </div>
+                {% if can_edit_customer(customer) %}
+                  <div class="cc-actions">
+                    {% if not ct.is_primary %}
+                      <form method="post" action="{{ url_for('customer.set_primary_contact', cid=customer.id, fid=ct.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-outline-secondary" type="submit">设为主联系人</button>
+                      </form>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('customer.delete_contact', cid=customer.id, fid=ct.id) }}"
+                          data-confirm="删除联系人「{{ ct.name }}」？">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-sm btn-outline-danger" type="submit">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </form>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state py-3"><i class="bi bi-people"></i>还没有联系人，添加后便于区分对接人、财务与决策人</div>
+        {% endif %}
+
+        {% if can_edit_customer(customer) %}
+          <hr class="my-3">
+          <form method="post" action="{{ url_for('customer.add_contact', cid=customer.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-2">
+              <div class="col-md-3">
+                <input class="form-control form-control-sm" name="name" placeholder="姓名 *" required>
+              </div>
+              <div class="col-md-3">
+                <input class="form-control form-control-sm" name="position" placeholder="职位">
+              </div>
+              <div class="col-md-3">
+                <input class="form-control form-control-sm" name="phone" placeholder="电话">
+              </div>
+              <div class="col-md-3">
+                <input class="form-control form-control-sm" name="email" placeholder="邮箱">
+              </div>
+              <div class="col-md-3">
+                <input class="form-control form-control-sm" name="wechat" placeholder="微信号">
+              </div>
+              <div class="col-md-5">
+                <input class="form-control form-control-sm" name="remark" placeholder="备注（如：负责采购）">
+              </div>
+              <div class="col-md-4 d-flex align-items-center gap-3">
+                <div class="form-check mb-0">
+                  <input class="form-check-input" type="checkbox" name="is_primary" value="1" id="ctPrimary">
+                  <label class="form-check-label" for="ctPrimary" style="font-size:12.5px">设为主联系人</label>
+                </div>
+                <button class="btn btn-sm btn-primary ms-auto" type="submit">
+                  <i class="bi bi-person-plus"></i> 添加
+                </button>
+              </div>
+            </div>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i> 最近操作</span>
+        <a class="small" href="{{ url_for('logs', target_type='客户', target_id=customer.id) }}">全部 →</a>
+      </div>
+      <div class="card-body">
+        {% if object_logs %}
+          <div class="obj-log-list">
+            {% for log in object_logs %}
+              <div class="obj-log">
+                <span class="badge-soft {{ log.action_color }}">{{ log.action }}</span>
+                <div class="obj-log-body">
+                  <div class="obj-log-txt">{{ log.detail or '-' }}</div>
+                  <div class="obj-log-meta">{{ log.username }} · {{ log.create_time | dt }}</div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state py-3"><i class="bi bi-journal"></i>暂无与本客户相关的操作记录</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1" id="followups">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-pencil-square"></i> 写跟进</div>
+      <div class="card-body">
+        {% set f_customer = customer %}
+        {% set f_project = none %}
+        {% set f_next = url_for('customer.detail', cid=customer.id) + '#followups' %}
+        {% if can_edit_customer(customer) %}
+          {% include "partials/follow_form.html" %}
+        {% else %}
+          <div class="empty-state py-4"><i class="bi bi-lock"></i>没有该客户的编辑权限，仅可查看跟进记录</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i> 跟进记录（{{ customer.follow_ups | length }}）</span>
+        <span class="text-muted" style="font-size:11.5px;font-weight:400">最近在上，按跟进日期倒序</span>
+      </div>
+      <div class="card-body">
+        {% set f_rows = customer.follow_ups %}
+        {% set f_can_write = can_edit_customer(customer) %}
+        {% set f_next = url_for('customer.detail', cid=customer.id) + '#followups' %}
+        {% include "partials/follow_timeline.html" %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="text-muted small">
+      <i class="bi bi-exclamation-triangle"></i>
+      删除客户会连带删除其名下所有项目与附件文件，且不可恢复。
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('export.export_customers') }}">
+        <i class="bi bi-file-earmark-excel"></i> 导出客户台账
+      </a>
+      {% if can_delete_customer(customer) %}
+      <form method="post" action="{{ url_for('customer.delete_customer', cid=customer.id) }}"
+            data-confirm="确认删除客户「{{ customer.company_name }}」及其 {{ projects|length }} 个项目？此操作不可恢复！">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-outline-danger btn-sm" type="submit"><i class="bi bi-trash"></i> 删除该客户</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

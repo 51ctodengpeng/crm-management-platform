@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>注册成功 · {{ APP_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>(function(){try{var t=localStorage.getItem('crm-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-bs-theme',t);}}catch(e){}})();</script>
+
+</head>
+<body>
+<button class="theme-toggle theme-toggle--float" type="button" data-theme-toggle
+        aria-pressed="false" title="切换到夜间模式">
+  <i class="bi bi-moon-stars"></i><span data-theme-label>夜间</span>
+</button>
+
+<div class="auth-page">
+  <div class="auth-card text-center">
+    <div class="auth-logo" style="background:linear-gradient(135deg,#2ec89a,#00a870);box-shadow:0 10px 26px rgba(0,168,112,.4)">
+      <i class="bi bi-check-lg"></i>
+    </div>
+    <div class="auth-title">申请已提交</div>
+    <div class="auth-sub">账号 <strong>{{ username }}</strong> 已进入审批队列</div>
+
+    <div class="steps">
+      <div class="step done" data-step="1">填写资料</div>
+      <div class="step done" data-step="2">等待审批</div>
+      <div class="step" data-step="3">审批通过</div>
+    </div>
+
+    <div class="alert alert-info text-start small">
+      <i class="bi bi-info-circle-fill"></i>
+      {% if EMAIL_REGISTER %}
+        我们已向你的邮箱发送验证邮件，点击邮件中的链接完成验证{{ '后账号自动激活' if EMAIL_AUTO else '，之后再等待管理员审批' }}。
+        没收到请检查垃圾邮件箱，或联系管理员手动通过申请。
+      {% else %}
+        管理员审批通过后你即可使用该账号登录。若长时间未通过，请联系管理员确认。
+      {% endif %}
+    </div>
+
+    <a class="btn btn-primary w-100 py-2" href="{{ url_for('auth.login') }}">
+      <i class="bi bi-box-arrow-in-right"></i> 返回登录页
+    </a>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

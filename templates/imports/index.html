@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}批量导入{% endblock %}
+{% block page_title %}批量导入{% endblock %}
+{% block page_sub %}
+  用 Excel 批量录入客户与项目：先下载模板填写，上传后系统会先预览校验结果，确认无误再写库
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+  {% for kind, meta in kinds.items() %}
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-{{ 'people' if kind == 'customer' else 'kanban' }}"></i>
+            导入{{ meta.label }}</span>
+          <a class="btn btn-sm btn-outline-secondary"
+             href="{{ url_for('imports.download_template', kind=kind) }}">
+            <i class="bi bi-download"></i> 下载模板
+          </a>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('imports.preview') }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="kind" value="{{ kind }}">
+            <label class="form-label">选择填写好的 Excel（.xlsx）</label>
+            <input class="form-control mb-2" type="file" name="file" accept=".xlsx,.xlsm" required>
+            <div class="form-text mb-3">
+              单次最多 {{ max_rows }} 行；必填列：
+              {% for name, _, required, _ in meta.columns if required %}<b>{{ name }}</b>{% if not loop.last %}、{% endif %}{% endfor %}
+            </div>
+            <button class="btn btn-primary" type="submit">
+              <i class="bi bi-upload"></i> 上传并预览
+            </button>
+          </form>
+          <hr class="my-3">
+          <div class="text-muted" style="font-size:12px;line-height:1.9">
+            <div>· 上传后只做校验与预览，<b>不会立刻写库</b>，确认后才导入；</div>
+            <div>· 系统内已存在的{{ meta.label }}（{{ '同名公司' if kind == 'customer' else '同一客户下的同名项目' }}）会自动跳过；</div>
+            <div>· 错误行会在预览里标红并给出原因，改完重新上传即可。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="card mt-3">
+  <div class="card-header"><i class="bi bi-info-circle"></i> 填写建议</div>
+  <div class="card-body">
+    <div class="row g-3" style="font-size:13px">
+      <div class="col-md-6">
+        <div class="fw-semibold mb-1">客户</div>
+        <ul class="mb-0 ps-3 text-muted">
+          <li>「公司名称」是唯一识别依据，建议与合同抬头保持一致；</li>
+          <li>行业类型 / 客户等级 / 来源渠道 留空时按系统默认值处理；</li>
+          <li>日期列请填 <span class="mono">2026-01-31</span> 格式，Excel 日期格式也能识别。</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <div class="fw-semibold mb-1">项目</div>
+        <ul class="mb-0 ps-3 text-muted">
+          <li>「客户公司名称」必须与系统中已有客户完全一致，否则该行报错；</li>
+          <li>「含税金额」按填写值反算不含税金额，税率默认 6%；</li>
+          <li>结束日期不得早于开始日期，账期留空按 30 天。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

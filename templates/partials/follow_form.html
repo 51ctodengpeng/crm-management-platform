@@ -1,0 +1,37 @@
+{# 跟进录入表单：需要 f_customer；f_project 可空；f_next 为保存后的返回地址 #}
+<form class="follow-box" method="post" action="{{ url_for('followup.add') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="customer_id" value="{{ f_customer.id }}">
+  {% if f_project %}<input type="hidden" name="project_id" value="{{ f_project.id }}">{% endif %}
+  <input type="hidden" name="next" value="{{ f_next }}">
+
+  <div class="mb-2">
+    <label class="form-label">跟进方式</label>
+    <select name="method" class="form-select form-select-sm">
+      {% for m in FOLLOWUP_METHODS %}
+        <option value="{{ m }}">{{ m }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="mb-2">
+    <label class="form-label">跟进日期</label>
+    <input type="date" name="followed_at" class="form-control form-control-sm"
+           value="{{ now.strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}">
+  </div>
+  <div class="mb-2">
+    <label class="form-label">沟通内容 <span class="text-danger">*</span></label>
+    <textarea name="content" class="form-control form-control-sm" required minlength="2"
+              maxlength="2000" placeholder="例：确认三期实施排期，客户要求本周五前给出驻场名单"></textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">下次跟进（可空）</label>
+    <input type="date" name="next_at" class="form-control form-control-sm"
+           min="{{ now.strftime('%Y-%m-%d') }}">
+  </div>
+  <button class="btn btn-primary btn-sm w-100" type="submit">
+    <i class="bi bi-plus-lg"></i> 保存跟进
+  </button>
+  <div class="text-muted mt-2" style="font-size:11px">
+    保存后会更新客户的「最近跟进 / 下次跟进」，并出现在待办提醒里。
+  </div>
+</form>

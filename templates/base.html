@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  {# 首屏前恢复主题，避免亮色闪烁 #}
+  <script>(function(){try{var t=localStorage.getItem('crm-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-bs-theme',t);}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ APP_NAME }}{% endblock %} · {{ APP_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-shell">
+  <!-- ================= 侧边导航 ================= -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo"><i class="bi bi-hexagon-fill"></i></div>
+      <div class="brand-text">
+        <div class="brand-title">客户管理</div>
+        <div class="brand-sub">CRM System</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
+        <i class="bi bi-grid-1x2-fill"></i> 经营概览
+      </a>
+      <a class="nav-item {% if request.blueprint == 'todo' %}active{% endif %}" href="{{ url_for('todo.index') }}">
+        <i class="bi bi-bell-fill"></i> 待办提醒
+        {% if TODO.total %}<span class="nav-badge">{{ TODO.total }}</span>{% endif %}
+      </a>
+      <a class="nav-item {% if request.blueprint == 'customer' %}active{% endif %}" href="{{ url_for('customer.list_customers') }}">
+        <i class="bi bi-people-fill"></i> 客户管理
+      </a>
+      <a class="nav-item {% if request.blueprint == 'project' %}active{% endif %}" href="{{ url_for('project.list_projects') }}">
+        <i class="bi bi-kanban-fill"></i> 项目管理
+      </a>
+      <a class="nav-item {% if request.blueprint == 'finance' %}active{% endif %}" href="{{ url_for('finance.reconcile') }}">
+        <i class="bi bi-cash-coin"></i> 收款对账
+      </a>
+
+      {% if current_user.is_admin %}
+        <div class="nav-label">系统管理</div>
+        <a class="nav-item {% if request.blueprint == 'user' %}active{% endif %}" href="{{ url_for('user.list_users') }}">
+          <i class="bi bi-person-badge-fill"></i> 账号管理
+          {% if pending_users %}<span class="nav-badge">{{ pending_users }}</span>{% endif %}
+        </a>
+        <a class="nav-item {% if request.blueprint == 'perm' %}active{% endif %}" href="{{ url_for('perm.list_perms') }}">
+          <i class="bi bi-shield-lock-fill"></i> 权限管理
+        </a>
+        <a class="nav-item {% if request.blueprint == 'settings' %}active{% endif %}" href="{{ url_for('settings.index') }}">
+          <i class="bi bi-gear-fill"></i> 系统设置
+        </a>
+        <a class="nav-item {% if request.blueprint == 'option' %}active{% endif %}" href="{{ url_for('option.index') }}">
+          <i class="bi bi-list-check"></i> 选项管理
+        </a>
+      {% endif %}
+
+      <a class="nav-item {% if request.blueprint == 'profile' %}active{% endif %}" href="{{ url_for('profile.edit') }}">
+        <i class="bi bi-person-circle"></i> 个人资料
+      </a>
+      <a class="nav-item {% if request.endpoint == 'auth.change_password' %}active{% endif %}" href="{{ url_for('auth.change_password') }}">
+        <i class="bi bi-shield-lock"></i> 修改密码
+      </a>
+
+      {# ---------- 数据与安全：沉到侧边栏底部，与常用操作拉开距离，避免误触 ---------- #}
+      <div class="nav-bottom">
+        <div class="nav-label">数据与安全</div>
+        <a class="nav-item" href="{{ url_for('export.export_customers') }}"
+           data-confirm-template="#tplExportCustomers">
+          <i class="bi bi-file-earmark-excel"></i> 导出客户台账
+        </a>
+        <a class="nav-item" href="{{ url_for('export.export_projects') }}"
+           data-confirm-template="#tplExportProjects">
+          <i class="bi bi-file-earmark-excel"></i> 导出项目台账
+        </a>
+        <a class="nav-item {% if request.endpoint == 'logs' %}active{% endif %}" href="{{ url_for('logs') }}">
+          <i class="bi bi-clock-history"></i> 操作日志
+        </a>
+        {% if can_create_data %}
+          <a class="nav-item {% if request.blueprint == 'imports' %}active{% endif %}"
+             href="{{ url_for('imports.index') }}">
+            <i class="bi bi-upload"></i> 批量导入
+          </a>
+        {% endif %}
+        {% if current_user.is_admin %}
+          <a class="nav-item {% if request.blueprint == 'recycle' %}active{% endif %}"
+             href="{{ url_for('recycle.index') }}">
+            <i class="bi bi-recycle"></i> 回收站
+          </a>
+          <a class="nav-item {% if request.blueprint == 'backup' %}active{% endif %}"
+             href="{{ url_for('backup.index') }}">
+            <i class="bi bi-cloud-arrow-down"></i> 备份与恢复
+          </a>
+        {% endif %}
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a class="user-chip" href="{{ url_for('profile.edit') }}" title="个人资料">
+        <div class="user-avatar">
+          {% if current_user.avatar_url %}
+            <img src="{{ current_user.avatar_url }}" alt="{{ current_user.display_name }}">
+          {% else %}{{ current_user.initial }}{% endif %}
+        </div>
+        <div style="min-width:0">
+          <div class="user-name text-truncate">{{ current_user.display_name }}</div>
+          <div class="user-sub">{{ current_user.role_label }}</div>
+        </div>
+      </a>
+      <a class="btn btn-sm btn-outline-light w-100" href="{{ url_for('auth.logout') }}">
+        <i class="bi bi-box-arrow-right"></i> 退出登录
+      </a>
+    </div>
+  </aside>
+
+  <!-- ================= 主内容 ================= -->
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+        <div class="page-sub">{% block page_sub %}{% endblock %}</div>
+      </div>
+      <div class="topbar-actions">
+        <a class="icon-btn" href="{{ url_for('todo.index') }}" title="待办提醒">
+          <i class="bi bi-bell"></i>
+          {% if TODO.total %}<span class="icon-badge">{{ TODO.total }}</span>{% endif %}
+        </a>
+        <button class="theme-toggle" type="button" data-theme-toggle
+                aria-pressed="false" title="切换到夜间模式">
+          <i class="bi bi-moon-stars"></i><span data-theme-label>夜间</span>
+        </button>
+        <form class="top-search d-none d-lg-block" method="get" action="{{ url_for('search') }}">
+          <i class="bi bi-search"></i>
+          <input type="text" name="q" placeholder="搜索客户 / 项目 / 联系人 / 微信"
+                 value="{{ keyword if request.endpoint == 'search' else '' }}">
+        </form>
+        {% block actions %}{% endblock %}
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-area">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show py-2 mb-2" role="alert">
+              <i class="bi bi-info-circle-fill me-1"></i>{{ message }}
+              <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    <!-- ================= 页脚 ================= -->
+    <footer class="site-footer">
+      <div class="footer-main">
+        <span class="footer-team">
+          <i class="bi bi-terminal-fill"></i>
+          由 <strong>PowerShell 中文社区团队</strong> 开发并提供技术支持
+        </span>
+        <span class="footer-links">
+          <a href="https://www.powershell.com.cn" target="_blank" rel="noopener noreferrer">
+            <i class="bi bi-globe2"></i>www.powershell.com.cn
+          </a>
+          <span class="footer-dot">·</span>
+          <a href="mailto:dengpeng@powershell.com.cn">
+            <i class="bi bi-envelope"></i>dengpeng@powershell.com.cn
+          </a>
+        </span>
+      </div>
+      <div class="footer-copy">© {{ now.year }} {{ APP_NAME }} · 内部使用</div>
+    </footer>
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dialog.js') }}"></script>
+<script src="{{ url_for('static', filename='js/auto-filter.js') }}"></script>
+
+{# ---------- 导出前的二次确认内容（由 dialog.js 注入弹窗，链接上只放模板 id） ---------- #}
+<template id="tplExportCustomers">
+  <p class="mb-2">即将导出 <strong>客户台账</strong>（Excel 文件），包含以下内容：</p>
+  <ul>
+    <li>客户基础信息：公司名称、客户等级、所属行业、来源渠道</li>
+    <li>联系人信息：对接人、电话、邮箱、<strong>微信号</strong>、所在地区、详细地址</li>
+    <li>备注与创建 / 最后修改时间</li>
+  </ul>
+  <p class="mb-0 text-muted">
+    影响：文件会保存到本机下载目录，其中含客户联系方式等敏感信息，请勿随意外发；
+    本次导出会写入操作日志（含导出条数与操作人）。
+  </p>
+</template>
+
+<template id="tplExportProjects">
+  <p class="mb-2">即将导出 <strong>项目台账</strong>（Excel 文件），包含以下内容：</p>
+  <ul>
+    <li>项目信息：项目名称、所属客户、类型、状态、服务方式</li>
+    <li>金额信息：合同金额、税点、含税金额、税额、已对账金额、待收差额</li>
+    <li>付款方式、周期、附件数量与项目描述</li>
+  </ul>
+  <p class="mb-0 text-muted">
+    影响：文件会保存到本机下载目录，仅包含你有查看权限的项目；
+    本次导出会写入操作日志（含导出条数与操作人）。
+  </p>
+</template>
+<template id="tplExportPayments">
+  <p class="mb-2">即将导出 <strong>收款流水</strong>（Excel 文件），包含以下内容：</p>
+  <ul>
+    <li>所属项目与客户、收款金额、付款方式与转账渠道</li>
+    <li>交易流水号、付款方、到账日期</li>
+    <li>对账状态、对账人、对账时间、登记人与备注</li>
+  </ul>
+  <p class="mb-0 text-muted">
+    影响：仅包含你有查看权限、且符合当前筛选条件的记录；文件含交易流水号等财务信息，请妥善保管。
+    本次导出会写入操作日志。
+  </p>
+</template>
+{% block scripts %}{% endblock %}
+</body>
+</html>

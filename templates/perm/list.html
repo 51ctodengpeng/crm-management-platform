@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}权限管理{% endblock %}
+{% block page_title %}权限管理{% endblock %}
+{% block page_sub %}按「角色 → 数据范围 → 项目操作」三层分配权限，普通成员默认看不到未授权项目{% endblock %}
+
+{% block actions %}
+<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('user.list_users') }}">
+  <i class="bi bi-person-badge"></i> 账号管理
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- ================= 权限模型说明 ================= -->
+<div class="model-grid mb-3">
+  <div class="model-card">
+    <div class="mc-title"><i class="bi bi-person-check"></i>角色（Role）</div>
+    <ul>
+      <li><span class="mc-k">管理员</span><span>全部数据 + 全部操作，不受项目授权限制</span></li>
+      <li><span class="mc-k">普通成员</span><span>受数据范围与项目授权约束，可被单独配置</span></li>
+      <li><span class="mc-k">说明</span><span class="mc-desc">账号管理、权限配置仅管理员可进入</span></li>
+    </ul>
+  </div>
+  <div class="model-card">
+    <div class="mc-title"><i class="bi bi-diagram-3"></i>数据范围（Scope）</div>
+    <ul>
+      <li><span class="mc-k">全部数据</span><span>可见全部客户与项目</span></li>
+      <li><span class="mc-k">仅授权项目</span><span>只能看到被显式授权的项目及其所属客户</span></li>
+      <li><span class="mc-k">新增能力</span><span class="mc-desc">独立开关，控制能否新增客户 / 项目</span></li>
+    </ul>
+  </div>
+  <div class="model-card">
+    <div class="mc-title"><i class="bi bi-sliders"></i>操作类型（Action）</div>
+    <ul>
+      <li><span class="mc-k">查看</span><span>列表与详情可见，可下载附件</span></li>
+      <li><span class="mc-k">修改</span><span>编辑项目与客户、上传附件（含查看）</span></li>
+      <li><span class="mc-k">删除</span><span>删除项目与附件（含修改、查看）</span></li>
+    </ul>
+  </div>
+</div>
+
+<form class="filter-bar row g-2 align-items-center" method="get" data-auto-filter>
+  <div class="col-md-5">
+    <input type="text" name="q" value="{{ keyword }}" class="form-control" data-autofocus
+           placeholder="搜索账号 / 姓名 / 部门">
+  </div>
+  <div class="col-md-3 d-flex gap-2 align-items-center">
+    <a class="btn btn-light" href="{{ url_for('perm.list_perms') }}">重置</a>
+    <span class="perm-hint">条件即时生效</span>
+  </div>
+  <div class="col-md-4 text-md-end perm-hint">
+    共 {{ total_projects }} 个项目可供授权
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:230px">成员</th>
+          <th style="width:110px">状态</th>
+          <th style="width:150px">数据范围</th>
+          <th>项目授权</th>
+          <th style="width:130px" class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in members %}
+          {% set st = stats.get(u.id, {'total': 0, 'view': 0, 'edit': 0, 'delete': 0}) %}
+          <tr>
+            <td>
+              <span class="mini-avatar">{{ u.initial }}</span>
+              <a class="company-link" href="{{ url_for('user.detail', uid=u.id) }}">{{ u.username }}</a>
+              <div class="cell-sub">{{ u.real_name or '未填写姓名' }}{% if u.department %} · {{ u.department }}{% endif %}</div>
+            </td>
+            <td><span class="badge-soft {{ u.status_color }}">{{ u.status_label }}</span></td>
+            <td>
+              <span class="badge-soft {% if u.data_scope == 'all' %}red{% else %}gray{% endif %}">
+                {{ DATA_SCOPES.get(u.data_scope or 'assigned') }}
+              </span>
+              {% if u.can_create %}
+                <div class="cell-sub"><i class="bi bi-plus-circle"></i> 可新增客户/项目</div>
+              {% endif %}
+            </td>
+            <td>
+              {% if (u.data_scope or 'assigned') == 'all' %}
+                <span class="text-muted small">全部项目可见（授权记录 {{ st.total }} 项，暂不生效）</span>
+              {% elif st.total %}
+                <span class="badge-soft cyan">{{ st.view }} 可见</span>
+                <span class="badge-soft orange ms-1">{{ st.edit }} 修改</span>
+                <span class="badge-soft red ms-1">{{ st.delete }} 删除</span>
+              {% else %}
+                <span class="text-muted small">未授权任何项目</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('perm.edit_perms', uid=u.id) }}">
+                <i class="bi bi-sliders"></i> 配置权限
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty-state"><i class="bi bi-shield-lock"></i>没有符合条件的成员</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="perm-hint mt-2">
+  <i class="bi bi-info-circle"></i>
+  管理员账号固定拥有全部权限，不出现在此列表；成员角色变更后，已配置的项目授权会自动保留。
+</div>
+{% endblock %}

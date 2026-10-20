@@ -1,0 +1,9 @@
+Flask>=3.0
+Flask-SQLAlchemy>=3.1
+Flask-Login>=0.6.3
+Flask-WTF>=1.2
+openpyxl>=3.1
+waitress>=3.0                          # Windows 下替代 gunicorn 的生产级 WSGI
+gunicorn>=21.2 ; sys_platform != "win32"
+PyMySQL>=1.1 ; sys_platform != "win32"        # 服务器部署连 MySQL 8（桌面版仍用 SQLite）
+cryptography>=42 ; sys_platform != "win32"    # MySQL 8 默认 caching_sha2_password 认证需要

@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}账号详情 · {{ user.username }}{% endblock %}
+{% block page_title %}{{ user.display_name }}{% endblock %}
+{% block page_sub %}
+  <span class="badge-soft {% if user.is_admin %}red{% else %}gray{% endif %}">{{ user.role_label }}</span>
+  <span class="badge-soft {{ user.status_color }} ms-1">{{ user.status_label }}</span>
+  <span class="ms-2">账号 {{ user.username }} · 注册于 {{ user.create_time | dt('%Y-%m-%d %H:%M') }}</span>
+{% endblock %}
+
+{% block actions %}
+<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('user.list_users') }}">返回账号列表</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-person-vcard"></i> 账号信息</div>
+      <div class="card-body">
+        <!-- 头像：管理员可代为更换 -->
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="avatar-sm">
+            {% if user.avatar_url %}
+              <img src="{{ user.avatar_url }}" alt="{{ user.display_name }}">
+            {% else %}{{ user.initial }}{% endif %}
+          </div>
+          <div class="flex-grow-1">
+            <form method="post" action="{{ url_for('profile.upload_avatar') }}"
+                  enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="uid" value="{{ user.id }}">
+              <input type="hidden" name="next" value="{{ url_for('user.detail', uid=user.id) }}">
+              <input type="file" name="avatar" class="form-control form-control-sm" required
+                     accept=".jpg,.jpeg,.png,.gif,.bmp,.webp">
+              <button class="btn btn-sm btn-outline-primary flex-shrink-0" type="submit">上传</button>
+            </form>
+            <div class="form-text">jpg / png / gif / webp，≤ 2MB</div>
+          </div>
+        </div>
+
+        <div class="info-grid" style="grid-template-columns:1fr">
+          <div class="info-item"><div class="label">账号</div><div class="value mono">{{ user.username }}</div></div>
+          <div class="info-item"><div class="label">姓名</div><div class="value">{{ user.real_name or '-' }}</div></div>
+          <div class="info-item"><div class="label">所属部门</div><div class="value">{{ user.department or '-' }}</div></div>
+          <div class="info-item"><div class="label">微信号</div>
+            <div class="value mono">
+              {% if user.wechat %}<i class="bi bi-wechat text-success"></i> {{ user.wechat }}{% else %}-{% endif %}
+            </div></div>
+          <div class="info-item"><div class="label">手机 / 邮箱</div>
+            <div class="value">{{ user.phone or '-' }} / {{ user.email or '-' }}</div></div>
+          <div class="info-item"><div class="label">最后登录</div>
+            <div class="value">{{ user.last_login | dt }}</div></div>
+          <div class="info-item"><div class="label">审批信息</div>
+            <div class="value">
+              {% if user.approve_time %}
+                {{ user.approved_by or '管理员' }} 于 {{ user.approve_time | dt }}
+                {% if user.review_remark %}<div class="text-muted small mt-1">备注：{{ user.review_remark }}</div>{% endif %}
+              {% else %}
+                尚未审批
+              {% endif %}
+            </div>
+          </div>
+          {% if user.apply_reason %}
+            <div class="info-item"><div class="label">申请说明</div><div class="value">{{ user.apply_reason }}</div></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-sliders"></i> 维护资料</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('user.edit_profile', uid=user.id) }}" class="row g-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-md-6">
+            <label class="form-label">登录账号</label>
+            <input type="text" name="username" class="form-control mono" required
+                   value="{{ user.username }}" pattern="[A-Za-z0-9_@.\-]{3,32}"
+                   title="3-32 位字母、数字或 _ @ . - 组合">
+            <div class="form-text">支持修改；改后本人须用新账号登录，历史日志仍保留旧账号名。</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">姓名</label>
+            <input type="text" name="real_name" class="form-control" value="{{ user.real_name or '' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">所属部门</label>
+            <input type="text" name="department" class="form-control" value="{{ user.department or '' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">微信号</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-wechat"></i></span>
+              <input type="text" name="wechat" class="form-control" maxlength="64"
+                     value="{{ user.wechat or '' }}">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">手机号</label>
+            <input type="text" name="phone" class="form-control" value="{{ user.phone or '' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">邮箱</label>
+            <input type="text" name="email" class="form-control" value="{{ user.email or '' }}">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-primary btn-sm"><i class="bi bi-check2"></i> 保存资料</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-shield-check"></i> 数据权限</span>
+        {% if not user.is_admin %}
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('perm.edit_perms', uid=user.id) }}">
+            配置权限
+          </a>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-item"><div class="label">数据范围</div>
+            <div class="value">{{ user.scope_label }}</div></div>
+          <div class="info-item"><div class="label">授权项目</div>
+            <div class="value">{{ user.project_permissions | length }} 个</div></div>
+          <div class="info-item"><div class="label">新增客户 / 项目</div>
+            <div class="value">{{ '允许' if user.can_create_data else '不允许' }}</div></div>
+        </div>
+        {% if user.is_admin %}
+          <div class="perm-hint mt-2"><i class="bi bi-info-circle"></i> 管理员固定拥有全部数据与全部操作权限。</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-shield-check"></i> 账号状态操作</div>
+      <div class="card-body d-flex flex-wrap gap-2">
+        {% if user.status == 'pending' %}
+          <form method="post" action="{{ url_for('user.approve', uid=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ url_for('user.detail', uid=user.id) }}">
+            <button class="btn btn-primary btn-sm"><i class="bi bi-check2"></i> 审批通过</button>
+          </form>
+          <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal">拒绝申请</button>
+        {% else %}
+          <form method="post" action="{{ url_for('user.toggle_status', uid=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ url_for('user.detail', uid=user.id) }}">
+            <button class="btn btn-sm {% if user.status == 'active' %}btn-outline-danger{% else %}btn-primary{% endif %}">
+              <i class="bi bi-power"></i> {{ '停用账号' if user.status == 'active' else '启用账号' }}
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('user.change_role', uid=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="role" value="{{ 'user' if user.is_admin else 'admin' }}">
+            <input type="hidden" name="next" value="{{ url_for('user.detail', uid=user.id) }}">
+            <button class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-arrow-repeat"></i> {{ '取消管理员' if user.is_admin else '设为管理员' }}
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="rejectModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" method="post" action="{{ url_for('user.reject', uid=user.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-x-circle text-danger"></i> 拒绝注册申请</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">拒绝原因</label>
+        <textarea name="review_remark" class="form-control" rows="3"
+                  placeholder="该原因会展示给申请人"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-danger btn-sm">确认拒绝</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

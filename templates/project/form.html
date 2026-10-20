@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% set is_edit = project is not none %}
+{% block title %}{{ '编辑项目' if is_edit else '新增项目' }}{% endblock %}
+{% block page_title %}{{ '编辑项目' if is_edit else '新增项目' }}{% endblock %}
+{% block page_sub %}{{ project.project_name if is_edit else '项目需归属到某个客户，保存后可在详情页上传合同、发票等附件' }}{% endblock %}
+
+{% block content %}
+{% if not customers %}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    还没有任何客户，请先 <a href="{{ url_for('customer.new_customer') }}">新增客户</a> 再创建项目。
+  </div>
+{% endif %}
+
+<form method="post" id="projectForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-kanban"></i> 项目信息</div>
+        <div class="card-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label required">所属客户</label>
+            <select name="customer_id" class="form-select" required>
+              <option value="">请选择客户</option>
+              {% set cur_cid = (form.get('customer_id') | int) if form.get('customer_id') else (project.customer_id if is_edit else 0) %}
+              {% for c in customers %}
+                <option value="{{ c.id }}" {% if cur_cid == c.id %}selected{% endif %}>{{ c.company_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required">项目名称</label>
+            <input type="text" name="project_name" class="form-control" required
+                   placeholder="例：AD域维保项目"
+                   value="{{ form.get('project_name') or (project.project_name if is_edit else '') }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">项目类型</label>
+            {# 「其他」由 type_options 保证恒在最后；末尾固定追加「自定义…」入口 #}
+            {% set cur_type = form.get('project_type') or (project.project_type if is_edit else '') %}
+            {% set type_custom = cur_type and cur_type not in type_options %}
+            <select name="project_type" id="projectType" class="form-select"
+                    data-custom-target="projectTypeCustom" data-flag="{{ CUSTOM_CHANNEL_FLAG }}">
+              <option value="">请选择</option>
+              {% for t in type_options %}
+                <option value="{{ t }}" {% if cur_type == t %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+              <option value="{{ CUSTOM_CHANNEL_FLAG }}" {% if type_custom %}selected{% endif %}>自定义…</option>
+            </select>
+            <input type="text" name="project_type_custom" id="projectTypeCustom"
+                   class="form-control mt-2 {% if not type_custom %}d-none{% endif %}"
+                   maxlength="32" placeholder="填写具体类型，例：数据库运维"
+                   value="{{ cur_type if type_custom else '' }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">项目状态</label>
+            {% set cur_status = form.get('project_status') or (project.project_status if is_edit else (default_status or '待实施')) %}
+            {% set status_custom = cur_status and cur_status not in status_options %}
+            <select name="project_status" id="projectStatus" class="form-select"
+                    data-custom-target="projectStatusCustom" data-flag="{{ CUSTOM_CHANNEL_FLAG }}">
+              {% for s in status_options %}
+                <option value="{{ s }}" {% if cur_status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+              <option value="{{ CUSTOM_CHANNEL_FLAG }}" {% if status_custom %}selected{% endif %}>自定义…</option>
+            </select>
+            <input type="text" name="project_status_custom" id="projectStatusCustom"
+                   class="form-control mt-2 {% if not status_custom %}d-none{% endif %}"
+                   maxlength="32" placeholder="填写具体状态，例：待收款"
+                   value="{{ cur_status if status_custom else '' }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">服务方式</label>
+            {% set cur_service = form.get('service_mode') or (project.service_mode if is_edit else (default_service or '远程服务')) %}
+            <select name="service_mode" class="form-select">
+              {% for m in SERVICE_MODES %}
+                <option value="{{ m }}" {% if cur_service == m %}selected{% endif %}>{{ m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">付款方式</label>
+            {% set cur_pay = form.get('payment_method') or (project.payment_method if is_edit else (default_payment or '支付软件转账')) %}
+            <select name="payment_method" class="form-select">
+              {% for m in PAYMENT_METHODS %}
+                <option value="{{ m }}" {% if cur_pay == m %}selected{% endif %}>{{ m }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">{{ '需登记流水号并对账' if cur_pay in TRANSFER_METHODS else '不产生流水号，登记后可直接对账' }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">启动日期</label>
+            <input type="date" name="start_date" class="form-control"
+                   value="{{ form.get('start_date') or (project.start_date.strftime('%Y-%m-%d') if is_edit and project.start_date else '') }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">结束日期</label>
+            <input type="date" name="end_date" class="form-control"
+                   value="{{ form.get('end_date') or (project.end_date.strftime('%Y-%m-%d') if is_edit and project.end_date else '') }}">
+          </div>
+
+          {# ---------- 金额与税点：双向换算 ---------- #}
+          {% set raw_net = form.get('project_amount') %}
+          {% set raw_gross = form.get('tax_included_amount') %}
+          {% set raw_rate = form.get('tax_rate') %}
+          {% set net_val = raw_net if raw_net is not none else (('%.2f' | format(project.project_amount or 0)) if is_edit else '') %}
+          {% set gross_val = raw_gross if raw_gross is not none else (('%.2f' | format(project.tax_included_amount or 0)) if is_edit else '') %}
+          {% set rate_val = raw_rate if raw_rate is not none else (('%g' | format(project.tax_rate if project.tax_rate is not none else 6)) if is_edit else '6') %}
+          <div class="col-12">
+            <div class="amount-box">
+              <div class="row g-3 align-items-start">
+                <div class="col-md-4">
+                  <label class="form-label">合同金额（不含税，元）</label>
+                  <input type="text" name="project_amount" id="netAmount" class="form-control"
+                         inputmode="decimal" placeholder="0.00" value="{{ net_val }}">
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label">税点（%）</label>
+                  <input type="text" name="tax_rate" id="taxRate" class="form-control"
+                         inputmode="decimal" placeholder="6" value="{{ rate_val }}">
+                  <div class="form-text">默认 6%</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">含税价格（元）</label>
+                  <input type="text" name="tax_included_amount" id="grossAmount" class="form-control"
+                         inputmode="decimal" placeholder="0.00" value="{{ gross_val }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                  <div class="tax-echo">
+                    <span class="label">税额</span>
+                    <span class="value num" id="taxAmount">¥ 0.00</span>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" name="amount_basis" id="amountBasis"
+                     value="{{ form.get('amount_basis') or 'net' }}">
+              <div class="form-text mt-2">
+                <i class="bi bi-arrow-left-right"></i>
+                改任一金额，另一项按税点自动换算（四舍五入到分）：含税 = 不含税 ×（1 + 税点/100）。
+                税点填 0 表示不含税，两项金额相等。
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">项目描述 / 服务内容 / 踩坑记录</label>
+            <textarea name="project_summary" class="form-control" rows="6"
+                      placeholder="服务范围、交付内容、故障处理过程、遗留问题等">{{ form.get('project_summary') or (project.project_summary if is_edit else '') }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-file-earmark-text"></i> 合同与归属</div>
+        <div class="card-body row g-3">
+          <div class="col-12">
+            <label class="form-label">项目负责人</label>
+            {% set cur_owner = form.get('owner') or (project.owner if is_edit else (current_user.display_name or current_user.username)) %}
+            <select name="owner" class="form-select">
+              <option value="">未分配</option>
+              {% for o in OWNERS %}
+                <option value="{{ o }}" {% if cur_owner == o %}selected{% endif %}>{{ o }}</option>
+              {% endfor %}
+              {% if cur_owner and cur_owner not in OWNERS %}
+                <option value="{{ cur_owner }}" selected>{{ cur_owner }}（已停用账号）</option>
+              {% endif %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">合同编号</label>
+            <input type="text" name="contract_no" class="form-control" maxlength="64"
+                   placeholder="例：HT-2026-0187"
+                   value="{{ form.get('contract_no') or (project.contract_no if is_edit else '') }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label">签订日期</label>
+            <input type="date" name="sign_date" class="form-control"
+                   value="{{ form.get('sign_date') or (project.sign_date.strftime('%Y-%m-%d') if is_edit and project.sign_date else '') }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label">账期（天）</label>
+            <input type="number" name="credit_days" class="form-control" min="0" max="365" step="1"
+                   placeholder="30"
+                   value="{{ form.get('credit_days') or (project.credit_days if is_edit and project.credit_days is not none else 30) }}">
+            <div class="form-text">用于应收逾期判定</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">付款条款</label>
+            <textarea name="payment_terms" class="form-control" rows="3"
+                      placeholder="例：预付 30%，验收后 60%，质保期满付 10%">{{ form.get('payment_terms') or (project.payment_terms if is_edit else '') }}</textarea>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><i class="bi bi-info-circle"></i> 提交</div>
+        <div class="card-body">
+          <p class="text-muted small">合同、发票、方案 Word/PPT 等文件请在项目详情页上传，支持拖拽与一次多选。</p>
+          <div class="d-grid gap-2">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> {{ '保存修改' if is_edit else '创建项目' }}</button>
+            <a class="btn btn-light" href="{{ url_for('project.detail', pid=project.id) if is_edit else url_for('project.list_projects') }}">取消</a>
+          </div>
+          {% if is_edit %}
+            <hr>
+            <div class="text-muted small">
+              <div>附件：{{ project.attachment_count }} 个（{{ project.attachment_total_human }}）</div>
+              <div>创建：{{ project.created_at | dt }}</div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var form = document.getElementById('projectForm');
+    if (!form) { return; }
+    var flag = '{{ CUSTOM_CHANNEL_FLAG }}';
+    var selects = Array.prototype.slice.call(
+      form.querySelectorAll('select[data-custom-target]')
+    );
+
+    // 「预设下拉 + 自定义」：类型 / 状态共用同一套逻辑，避免各写一份
+    selects.forEach(function (select) {
+      var box = document.getElementById(select.getAttribute('data-custom-target'));
+      if (!box) { return; }
+      select.addEventListener('change', function () {
+        var on = select.value === flag;
+        box.classList.toggle('d-none', !on);
+        if (on) { box.focus(); }
+      });
+      // 编辑态下若值不在候选里，脚本已把「自定义…」设为选中，这里同步显示输入框
+      if (select.value === flag) { box.classList.remove('d-none'); }
+    });
+
+    // 选「自定义…」时用输入框的值顶替下拉提交，避免服务端收到哨兵值
+    form.addEventListener('submit', function () {
+      selects.forEach(function (select) {
+        if (select.value !== flag) { return; }
+        var box = document.getElementById(select.getAttribute('data-custom-target'));
+        if (!box) { return; }
+        box.value = box.value.trim() || '其他';
+        select.disabled = true;
+        box.name = select.name;
+      });
+    });
+  })();
+
+  // ---------------- 金额与税点：双向联动 ----------------
+  // 与服务端同一套规则：含税 = 不含税 ×（1 + 税点/100），反向为除法，均四舍五入到分。
+  // 前端只做即时预览，提交后服务端会按 amount_basis 重算，保证两边结果一致。
+  (function () {
+    var net = document.getElementById('netAmount');
+    var gross = document.getElementById('grossAmount');
+    var rate = document.getElementById('taxRate');
+    var basis = document.getElementById('amountBasis');
+    var echo = document.getElementById('taxAmount');
+    if (!net || !gross || !rate) { return; }
+
+    var DEFAULT_RATE = 6;
+
+    function toNumber(el) {
+      var raw = (el.value || '').replace(/[,，¥￥%\s]/g, '');
+      var n = parseFloat(raw);
+      return isFinite(n) ? n : 0;
+    }
+
+    function currentRate() {
+      if (!(rate.value || '').trim()) { return DEFAULT_RATE; }
+      var n = toNumber(rate);
+      return Math.min(Math.max(n, 0), 100);
+    }
+
+    // 四舍五入到分（对齐后端 Decimal ROUND_HALF_UP，规避 1.005 这类二进制误差）
+    function round2(v) {
+      var sign = v < 0 ? -1 : 1;
+      return sign * Math.round(Math.abs(v) * 100 + 1e-6) / 100;
+    }
+
+    function fmt(v) { return round2(v).toFixed(2); }
+
+    function updateEcho() {
+      if (echo) { echo.textContent = '¥ ' + fmt(toNumber(gross) - toNumber(net)); }
+    }
+
+    function syncFromNet() {
+      var factor = 1 + currentRate() / 100;
+      var n = toNumber(net);
+      gross.value = net.value.trim() === '' ? '' : fmt(n * factor);
+      updateEcho();
+    }
+
+    function syncFromGross() {
+      var divisor = 1 + currentRate() / 100;
+      var g = toNumber(gross);
+      net.value = gross.value.trim() === '' ? '' : fmt(divisor ? g / divisor : 0);
+      updateEcho();
+    }
+
+    net.addEventListener('input', function () {
+      basis.value = 'net';
+      syncFromNet();
+    });
+
+    gross.addEventListener('input', function () {
+      basis.value = 'gross';
+      syncFromGross();
+    });
+
+    // 改税点时以「最后一次编辑的那一侧」为基准重算，默认以合同金额为准
+    rate.addEventListener('input', function () {
+      if (basis.value === 'gross' && (gross.value || '').trim() !== '') {
+        syncFromGross();
+      } else {
+        basis.value = 'net';
+        syncFromNet();
+      }
+    });
+
+    // 回填已有数据时不动原值，只算税额展示
+    updateEcho();
+  })();
+</script>
+{% endblock %}
