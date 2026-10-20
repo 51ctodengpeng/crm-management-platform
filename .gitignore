@@ -1,0 +1,46 @@
+# ---- 依赖与构建产物 ----
+node_modules/
+dist/
+build/
+target/
+bin/
+obj/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ---- 环境与密钥（严禁提交）----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets.json
+appsettings.Production.json
+
+# ---- IDE 与系统文件 ----
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 日志与临时文件 ----
+*.log
+logs/
+tmp/
+temp/
+*.bak
+*.tmp
+
+# ---- 数据库本地文件 ----
+*.mdf
+*.ldf
+*.sqlite
+*.db
